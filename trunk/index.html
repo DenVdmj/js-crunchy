@@ -1,0 +1,36 @@
+<html><head>
+
+<script>function load(){}</script>
+
+<script src='crunchy/crunchy.js'></script>
+<script src='crunchy/common.js'></script>
+<script src='crunchy/jsdefs.js'></script>
+<script src='crunchy/tokenizer.js'></script>
+<script src='crunchy/jsparse.js'></script>
+<script src='crunchy/crunch.js'></script>
+<script src='crunchy/renameVariables.js'></script>
+<script src='crunchy/write.js'></script>
+
+<script src='packer/fix-ie5.js'></script>
+<script src='packer/ParseMaster.js'></script>
+<script src='packer/pack.js'></script>
+
+<script src='crunchy/web.js'></script>
+
+<script>
+if(document.getElementById) {
+	window.onload = function() {
+		var pos = document.getElementById("crunchy");
+		if(pos)
+			pos.parentNode.replaceChild(Crunchy.webInterface(), pos);
+	}
+}
+</script>
+
+</head>
+<body>
+	<div id="crunchy">
+		<p>You'll need to use a recent browser, with javascript turned on in order to use Crunchy.</p>
+	</div>
+</body>
+</html>
