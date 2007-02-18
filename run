@@ -1,0 +1,13 @@
+mkdir -p build
+
+time (rhino cruncher.js crunchy/crunchy.js > build/crunchy.js)
+rhino tests.js
+js tests.js
+
+rhino cruncher.js crunchy/web.js > build/crunchy-web.js
+
+#time (rhino cruncher.js cruncher.js > build/cruncher.js)
+#cd build
+#CLASSPATH=/usr/share/java/js-1.6.jar java org.mozilla.javascript.tools.jsc.Main -O 9 cruncher.js
+#cd ..
+#time (CLASSPATH=/usr/share/java/js-1.6.jar:build java cruncher cruncher.js > build/cruncher2.js)
