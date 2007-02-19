@@ -128,41 +128,33 @@ Crunchy.Tokenizer.prototype = {
 		return (x && x.index == this._cursor) ? x : null;
 	},
 
-	_getToken : function(regExp) {
-		var x = this._matchRegExp(regExp);
-		if(!x) throw this.newSyntaxError("Illegal token: " + regExp + " " +
-				this.source.substr(this._cursor, 10));
-		return x[0];
-	},
-
-	_getKeyword : function(self, value) {
-		var token = self._newToken(Crunchy.lookupKeyword(value), value);
+	_getKeyword : function(self, text) {
+		var token = self._newToken(Crunchy.lookupKeyword(text), text)
 		token.isProperty = true;
 		return token;
 	},
 
-	_getTokenizeId : function(self) {
-		var text = self._getToken(/[\w$]+/g)
-		var token = self._newToken(
-			!Object.prototype[text] && Crunchy.lookupKeyword(text) || "IDENTIFIER",
-			text)
+	_getIdentifier : function(self, text) {
+		var token = self._newToken("IDENTIFIER", text)
 		token.isProperty = true;
 		return token;
 	},
 
-	_getNumber : function(self) {
-		var text = self._getToken(/0[xX][\da-fA-F]+|\d+\.?\d*([eE][-+]?\d+)?/g);
+	_getNumber : function(self, text) {
 		// TODO: Parse number.
 		return self._newToken("NUMBER", text);
 	},
 
-	_getDotNumber : function(self) {
-		var text = self._getToken(/\.\d+([eE][-+]?\d+)?/g);
-		return self._newToken("NUMBER", text, parseFloat(text));
+	_getDotNumber : function(self, text) {
+		if(text.length == 1) {
+			return self._getOp(self, text);
+		}
+		else {
+			return self._newToken("NUMBER", text, parseFloat(text));
+		}
 	},
 
-	_getString : function(self) {
-		var text = self._getToken(/'(\\.|[^'])*'|"(\\.|[^"])*"/g);
+	_getString : function(self, text) {
 		//return self._newToken("STRING", text);
 		var value = text.substr(1, text.length - 2)
 			.replace(/\\x[0-9a-fA-F][0-9a-fA-F]|\\./g, function(m) {
@@ -211,7 +203,7 @@ Crunchy.Tokenizer.prototype = {
 			var x = self._newToken("REGEXP", match[0], match[0]);
 		}
 		else {
-			var x = self._getOp(self, self._getToken(Crunchy._slashRegExp));
+			var x = self._getOp(self, text);
 		}
 		x.scanOperand = scanOperand;
 		return x;
@@ -226,8 +218,8 @@ Crunchy.Tokenizer.prototype = {
 			return self._newToken(Crunchy.opTypeNames[text], text);
 		}
 	},
-	_getWhiteSpace : function(self) {
-		var text = self._getToken(/\s+/g);
+
+	_getWhiteSpace : function(self, text) {
 		if(!self._scanNewlines) {
 			var newlines = text.match(/\n/g);
 			if (newlines) {
@@ -274,10 +266,14 @@ Crunchy.Tokenizer.prototype = {
 				var token = this._newToken("END");
 				return token.type;
 			}
-
 			// TODO: What happens if source ends with non-newline whitespace?
-			var c = this._matchRegExp(Crunchy._tokenRegExp)[0];
-			var token = (this._getTokenizers[c] || this._getWhiteSpace)(this, c, scanOperand)
+			var match = this._matchRegExp(Crunchy._tokenRegExp);
+			this._cursor += match[1].length;
+			var c = match[2];
+			var token = (
+				this._getTokenizers["$" + c] ||
+				this._subTokenizers[c.charAt(0)] ||
+				this._getWhiteSpace)(this, c, scanOperand)
 		} while(!token)
 
 		token.start = this._cursor;
@@ -307,82 +303,100 @@ Crunchy.Tokenizer.prototype = {
 ;(function() {
 	var CTp = Crunchy.Tokenizer.prototype;
 	var tokenizers = CTp._getTokenizers = {};
+	var subTokenizers = CTp._subTokenizers = {};
 
-	function addTokenizers(from, to, tokenizer) {
+	// The subTokenizers are single characters that identify tokens that
+	// can have several different forms (identifiers, numbers, etc.)
+
+	function addSubTokenizers(from, to, tokenizer) {
 		for(var i=from.charCodeAt(0), j=to.charCodeAt(0); i <=j; ++i)
-			tokenizers[String.fromCharCode(i)] = tokenizer;
+			subTokenizers[String.fromCharCode(i)] = tokenizer;
 	}
+	addSubTokenizers("A", "Z", CTp._getIdentifier);
+	addSubTokenizers("a", "z", CTp._getIdentifier);
+	subTokenizers["_"] = CTp._getIdentifier;
+	subTokenizers["$"] = CTp._getIdentifier;
+	addSubTokenizers("0", "9", CTp._getNumber);
+	subTokenizers["."] = CTp._getDotNumber;
+	subTokenizers["'"] = CTp._getString;
+	subTokenizers['"'] = CTp._getString;
 
-	addTokenizers("A", "Z", CTp._getTokenizeId);
-	addTokenizers("a", "z", CTp._getTokenizeId);
+	// tokenizers can take arbitrary identifiers - which might be members
+	// of object.prototype (or worse still __proto__). So need to add a prefix
+	// to all members to keep it safe.
+	tokenizers['$//'] = CTp._getCommentLine;
+	tokenizers['$/*'] = CTp._getCommentBlock;
 
-	tokenizers["_"] = CTp._getTokenizeId;
-	tokenizers["$"] = CTp._getTokenizeId;
-
-	addTokenizers("0", "9", CTp._getNumber);
-
-	for(var i="0".charCodeAt(0), j="9".charCodeAt(0); i <=j; ++i)
-		tokenizers["." + String.fromCharCode(i)]
-			= CTp._getDotNumber;
-
-	tokenizers["'"] = CTp._getString;
-	tokenizers['"'] = CTp._getString;
-
-	tokenizers['/'] = CTp._getSlash;
-
-	tokenizers['//'] = CTp._getCommentLine;
-	tokenizers['/*'] = CTp._getCommentBlock;
-
+	// The commented out regExpParts stuff has been replaced with a hand
+	// coded regular expression. It would be nice to be able to generate
+	// a fairly effecient regular expression automatically - this would
+	// make it easier to add new tokens. I suppose I could build a trie
+	// from the possible tokens, and generate a regular expression from that.
+	//
 	// Build a regexp that recognizes operators and punctuators (except
 	// newline).  Workaround: Konqueror doesn't support the $& notation for
 	// getting the match (is that a Seamonkey extension?)
+	//
+	//function regExpEscape(text) {
+	//	return text.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1");
+	//}
 
-	var regExpParts = [], slashRegExpParts = [];
+	//var regExpParts = [];
 
 	for(var i=0; i < Crunchy.tokens.length; ++i) {
 		var t = Crunchy.tokens[i];
 		if(/^[a-z]/.test(t)) { // Keywords
-			regExpParts.push(t.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1") + "\\b");
-			tokenizers[t] = CTp._getKeyword;
+			// Note: no need to add keywords to the regular expression, as
+			// the matcher for identifiers will pick them up.
+			tokenizers["$" + t] = CTp._getKeyword;
 		}
-		else if(/^[^\/A-Z\n]/.test(t)) { // Operators that don't start with a slash
-			if(t.length > 1)
-				regExpParts.push(t.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1"));
-			tokenizers[t] = CTp._getOp;
-		}
-		else if(t[0] == "/") { // Operators that start with a slash
-			slashRegExpParts.push(t.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1"));
+		else if(/^[^A-Z\n]/.test(t)) { // Operators
+			//if(t.length > 1)
+			//	regExpParts.push(regExpEscape(t));
+			tokenizers["$" + t] = t[0] == "/" ? CTp._getSlash : CTp._getOp;
 		}
 	}
 
 	for (var i=0; i < Crunchy.assignOps.length; ++i) {
 		t = Crunchy.assignOps[i];
-		if(t.charAt(0) != '/') {
-			regExpParts.push(
-				t.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1") + '=');
-			tokenizers[t + '='] = CTp._getOp;
-		}
-		else {
-			slashRegExpParts.push(
-				t.replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1") + '=');
-		}
+		//regExpParts.push(regExpEscape(t) + '=')
+		tokenizers["$" + t + '='] = t[0] == "/" ? CTp._getSlash : CTp._getOp;
 	}
 
-	for(var i=0; i < 10; ++i) {
-		regExpParts.push("\\." + i);
-	}
-
-	regExpParts.push("//".replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1"));
-	regExpParts.push("/*".replace(/([?|^&(){}\[\]+\-*\/\.])/g, "\\$1"));
+	//regExpParts.push(regExpEscape("//"));
+	//regExpParts.push(regExpEscape("/*"));
 
 	// Workaround: Konqueror's sort has a different lexical ordered to its
 	// comparison function.
-	function compare(x, y) { return x > y ? 1 : x < y ? -1 : 0; }
-//	Crunchy._tokenRegExp = new RegExp(regExpParts.sort(compare).reverse().join('|') +
-//			"|.|\n|\r", 'mg');
-	// TODO: Add 'n' flag back to regular expression?
-	Crunchy._tokenRegExp = /<<=?|>>>?=?|[*%<>^]=?|\|[|=]?|&[&=]?|[!=]=?=?|\+[+=]?|-[-=]?|\.[0-9]?|\/[\/\*]|;;;|.|[\n\r]/g;
+	//function compare(x, y) { return x > y ? 1 : x < y ? -1 : 0; }
+	//regExpParts = regExpParts.sort(compare).reverse();
 
-	Crunchy._slashRegExp = new
-		RegExp(slashRegExpParts.sort(compare).reverse().join('|'), 'g');
+	// TODO: Probably some others...
+	// TODO: The floating point numbers will need to appear before the operators.
+	//regExpParts.push("\\.\\d+(?:[eE][-+]?\\d+)?", "[a-zA-Z_$][\\w$]*", "[\\s\n\r]+", "\\d+\\.?\\d*(?:[eE][-+]?\\d+)?",
+	//  "'(?:\\\\.|[^'])*'", '"(?:\\\\.|[^"])*"', "0[xX][\\da-fA-F]+", ".");
+
+	// TODO: Do some kind of survery about which token types appear most often.
+	var regExpParts = [
+		"[a-zA-Z_$][\\w$]*",              // identifiers & keywords
+		"[\\s\n\r]+",                     // whitespace
+		";(?:;;)?",                       // ;, ;;;
+		"\\.\\d*(?:[eE][-+]?\\d+)?",      // '.', floating point numbers starting with '.'
+		"\\/[=\\/\\*]?",                  // /, /=, //, /*
+		"\\+[+=]?",                       // +, ++, +=
+		"-[-=]?",                         // -, --, -=
+		"<<=?",                           // <<, <<=
+		">>>?=?",                         // >>, >>>, >>=, >>>=
+		"[*%<>^]=?",                      // *,*=,%,%=,<,<=,>,>=,^,^=
+		"\\|[|=]?",                       // |,||,|=
+		"&[&=]?",                         // &, &&, &=
+		"[!=]=?=?",                       // !, !=, !==, =, ==, ===
+		"'(?:\\\\.|[^'])*'",              // single quoted strings
+		'"(?:\\\\.|[^"])*"',              // double quoted strings
+		"0[xX][\\da-fA-F]+",              // hex numbers
+		"\\d+\\.?\\d*(?:[eE][-+]?\\d+)?", // other numbers
+		"."                               // any other single character
+	];
+
+	Crunchy._tokenRegExp = new RegExp("([ \t]*)(" + regExpParts.join("|") + ")", 'mg');
 })();
