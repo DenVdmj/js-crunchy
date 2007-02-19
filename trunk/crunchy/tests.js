@@ -172,6 +172,9 @@ runTest("function foo(){return 1;}" +
 		"var x=bar()",
 		"test(x == 2)");
 
+runTest("var x = 0.24567", "test(x == 0.24567)");
+runTest("var x = {}; x.index = 5", "test(x.index == 5)");
+
 /**/
 
 print("Finished!");
