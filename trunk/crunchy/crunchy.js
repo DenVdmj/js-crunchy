@@ -18,21 +18,7 @@ Crunchy.crunch = function(x, settings) {
 		var root = Crunchy.parse(x);
 		Crunchy.runHooks(root);
 		Crunchy.renameVariables(root);
-		var crunched = Crunchy.write(root);
-
-		var minimized = pack(
-				crunched,
-				0,
-				true,
-				true);
-
-		var packed = pack(
-				crunched,
-				62,    // 0 = None, 10 = Numeric, 62 = Normal, 95 = High ASCII
-				true,  // Fast Decode
-				true   // SpecialChars... ;;; won't work, so I do it in crunchy instead.
-				);
-		return minimized.length < packed.length ? minimized : packed;
+		return Crunchy.write(root);
 	}
 	finally {
 		if(settings) Crunchy.settings = oldSettings;
@@ -46,6 +32,3 @@ load("jsparse.js")
 load("crunch.js")
 load("renameVariables.js")
 load("write.js")
-
-load("../packer/ParseMaster.js");
-load("../packer/pack.js");

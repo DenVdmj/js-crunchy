@@ -55,11 +55,11 @@ function runTestImpl($$$label, $$$code, $$$test) {
 	return finalResult;
 }
 
-if(Crunchy.crunch("a=b=c").length != 6) print("Bad crunching 1.");
-if(Crunchy.crunch("if(x==a)if(y==b)z()").length != 20) print("Bad crunching 2.");
-if(Crunchy.crunch("function x() { var spiffy; }").length != 20) print("Bad crunching 3.");
-if(Crunchy.crunch("function x(){var start_button}").length > 20) print("Bad crunching 4.");
-if(Crunchy.crunch("try{}catch(error){}").length > 16) print("Bad crunching 5.");
+if(Crunchy.crunch("a=b=c").length > 5) print("Bad crunching 1.");
+if(Crunchy.crunch("if(x==a)if(y==b)z()").length > 19) print("Bad crunching 2.");
+if(Crunchy.crunch("function x() { var spiffy; }").length > 19) print("Bad crunching 3.");
+if(Crunchy.crunch("function x(){var start_button}").length > 19) print("Bad crunching 4.");
+if(Crunchy.crunch("try{}catch(error){}").length > 15) print("Bad crunching 5.");
 
 runTest("var a=0;(function(){a=1})();", "test(a === 1)")
 runTest("var a=0\nfunction test(){}(function(){a=1})()", "test(a === 1)")
