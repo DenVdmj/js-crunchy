@@ -176,6 +176,8 @@ runTest("var x = 0.24567", "test(x == 0.24567)");
 runTest("var x = {}; x.index = 5", "test(x.index == 5)");
 
 runTest("var x = '\\\n!'", "test(x === '!')");
+runTest("var x = '\\\r!'", "test(x === '!')");
+runTest("var x = '\\\r\n!'", "test(x === '!')");
 runTest("Number.prototype.flump = 3; var x = 1 .flump;", "test(x === 3)");
 
 runTest("var x = 0; for(;;) { if(x === 2) break; ++x; }", "test(x === 2)");
