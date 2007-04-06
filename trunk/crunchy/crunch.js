@@ -25,7 +25,7 @@
 				func.body[i].children = func.body[i-1].children.concat(func.body[i].children);
 				func.body.splice(i-1, 1);
 			}
-			else if(func.body[i].type == "FOR" && func.body[i].setup.type == "VAR" && last) {
+			else if(func.body[i].type == "FOR" && func.body[i].setup && func.body[i].setup.type == "VAR" && last) {
 				func.body[i].setup.children = func.body[i-1].children.concat(func.body[i].setup.children);
 				func.body.splice(i-1, 1);
 			}
