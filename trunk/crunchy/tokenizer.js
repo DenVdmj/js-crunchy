@@ -157,7 +157,7 @@ Crunchy.Tokenizer.prototype = {
 	_getString : function(self, text) {
 		//return self._newToken("STRING", text);
 		var value = text.substr(1, text.length - 2)
-			.replace(/\\x[0-9a-fA-F][0-9a-fA-F]|\\./g, function(m) {
+			.replace(/\\x[0-9a-fA-F][0-9a-fA-F]|\\.|\\\n|\\\r\n?/g, function(m) {
 				if(m.length == 4) {
 					return String.fromCharCode(parseInt(m.substr(2), 16));
 				}
@@ -170,6 +170,8 @@ Crunchy.Tokenizer.prototype = {
 						case 'v': return '\x0b';
 						case 'f': return '\x0c';
 						case 'r': return '\x0d';
+						case '\n': return '';
+						case '\r': return '';
 						default: return m[1];
 					}
 				}
