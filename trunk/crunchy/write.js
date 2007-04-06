@@ -38,6 +38,9 @@ Crunchy.Writer.prototype = {
 
 	writeIsIdChar : /^[a-zA-Z0-9_$]$/,
 
+	// TODO: This is dire, I should do it much more intelligently.
+	// The statement ending stuff could probably be done better
+	// by iterating over the tree, similarly some of the space insertion.
 	write : function() {
 		if(this.needEnd) {
 			if(Crunchy.opTypeNames[arguments[0]]) {
@@ -64,6 +67,12 @@ Crunchy.Writer.prototype = {
 					break;
 				case '-':
 					if(token.charAt(0) == '-')
+						this.result.push(' ');
+					break;
+				case '0': case '1': case '2': case '3': case '4':
+				case '5': case '6': case '7': case '8': case '9':
+					// TODO: I think I only need to do this for integers.
+					if(token.charAt(0) == '.')
 						this.result.push(' ');
 					break;
 				default:
