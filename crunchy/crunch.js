@@ -17,6 +17,7 @@
 		}
 	}
 
+	// TODO: This doesn't combine var statements inside loops/if statements/block.
 	function combineVars(func) {
 		var i = 0, last = false;
 		while(i < func.body.length) {
