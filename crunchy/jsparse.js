@@ -239,6 +239,18 @@ function Block(t, x) {
 	return nodes;
 }
 
+function OptionalBlock(t, x) {
+	if(t.peekOperand() == "LEFT_CURLY") {
+		t.mustMatchOperand("LEFT_CURLY");
+		var nodes = Statements(t, x);
+		t.mustMatchOperator("RIGHT_CURLY");
+		return nodes;
+	}
+	else {
+		return Statement(t, x);
+	}
+}
+
 Crunchy.DECLARED_FORM = 0;
 Crunchy.EXPRESSED_FORM = 1;
 Crunchy.STATEMENT_FORM = 2;
@@ -273,8 +285,8 @@ function Statement2(t, x) {
 	  case "IF":
 		n = new Node(t, "IF");
 		n.setCondition(ParenExpression(t, x));
-		n.setThenPart(Statement(t, x));
-		n.setElsePart(t.matchOperator("ELSE") ? Statement(t, x) : null);
+		n.setThenPart(OptionalBlock(t, x));
+		n.setElsePart(t.matchOperator("ELSE") ? OptionalBlock(t, x) : null);
 		return [n];
 
 	  case "SWITCH":
@@ -349,20 +361,21 @@ function Statement2(t, x) {
 			n.setUpdate((t.peekOperand() == "RIGHT_PAREN") ? null : Expression(t, x));
 		}
 		t.mustMatchOperator("RIGHT_PAREN");
-		n.setBody(nest(t, x, n, Statement));
+		n.setBody(nest(t, x, n, OptionalBlock));
 		return [n];
 
 	  case "WHILE":
 		n = new Node(t);
 		n.isLoop = true;
 		n.setCondition(ParenExpression(t, x));
-		n.setBody(nest(t, x, n, Statement));
+		n.setBody(nest(t, x, n, OptionalBlock));
 		return [n];
 
 	  case "DO":
 		n = new Node(t);
 		n.isLoop = true;
-		n.setBody(nest(t, x, n, Statement, "WHILE"));
+		// TODO: I forget if the block really is optional.
+		n.setBody(nest(t, x, n, OptionalBlock, "WHILE"));
 		n.setCondition(ParenExpression(t, x));
 		if (!x.ecmaStrictMode) {
 			// <script language="JavaScript"> (without version hints) may need
@@ -449,7 +462,8 @@ function Statement2(t, x) {
 	  case "WITH":
 		n = new Node(t);
 		n.setObject(ParenExpression(t, x));
-		n.setBody(nest(t, x, n, Statement));
+		// TODO: I forget if with statement requires curlies.
+		n.setBody(nest(t, x, n, OptionalBlock));
 		return [n];
 
 	  case "VAR":
