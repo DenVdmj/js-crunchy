@@ -164,6 +164,17 @@ runTest("function foo(){return 1;}" +
 
 // Note: Different javascript interpreters disagree about this one.
 runTest("function foo(){return 1;}" +
+		"function bar(){if(false)function foo(){return 2} return foo(); }" +
+		"var x=bar()",
+		"test_result(x);");
+
+runTest("function foo(){return 1;}" +
+		"function bar(){if(true)function foo(){return 2} return foo(); }" +
+		"var x=bar()",
+		"test(x == 2);");
+
+// Note: Different javascript interpreters disagree about this one.
+runTest("function foo(){return 1;}" +
 		"function bar(){return foo(); {function foo(){return 2}}}" +
 		"var x=bar()",
 		"test_result(x)");

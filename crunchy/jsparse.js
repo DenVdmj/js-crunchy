@@ -274,8 +274,8 @@ function Statement2(t, x) {
 	// common semicolon insertion magic after this switch.
 	switch (tt) {
 	  case "FUNCTION":
-		return FunctionDefinition(t, x, true,
-				x.nestedLevel > 1 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM);
+		return [FunctionDefinition(t, x, true,
+				x.nestedLevel > 1 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
 	  case "LEFT_CURLY":
 		n = new Node(t, "BLOCK");
 		n.children = Statements(t, x);
