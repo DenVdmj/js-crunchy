@@ -60,6 +60,7 @@ if(Crunchy.crunch("if(x==a)if(y==b)z()").length > 19) print("Bad crunching 2.");
 if(Crunchy.crunch("function x() { var spiffy; }").length > 19) print("Bad crunching 3.");
 if(Crunchy.crunch("function x(){var start_button}").length > 19) print("Bad crunching 4.");
 if(Crunchy.crunch("try{}catch(error){}").length > 15) print("Bad crunching 5.");
+if(Crunchy.crunch("if(a==b){if(c==d)z()}").length > 19) print("Bad crunching 6.");
 
 runTest("var a=0;(function(){a=1})();", "test(a === 1)")
 runTest("var a=0\nfunction test(){}(function(){a=1})()", "test(a === 1)")
@@ -181,6 +182,9 @@ runTest("var x = '\\\r\n!'", "test(x === '!')");
 runTest("Number.prototype.flump = 3; var x = 1 .flump;", "test(x === 3)");
 
 runTest("var x = 0; for(;;) { if(x === 2) break; ++x; }", "test(x === 2)");
+
+runTest("var x = 0, y; for(y = (1 in [1,2]); y; y = false) { ++x; }", "test(x === 1)");
+
 
 /**/
 print("Finished!");
