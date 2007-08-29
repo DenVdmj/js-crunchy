@@ -166,17 +166,21 @@
 				node.ref = currentScope.refVar(node.value);
 				break;
 			case "CALL":
-				// Calls to eval can add variables, so any variable reference in
-				// this scope are at risk, and their names must be fixed.
+				// Calls to eval can add variables or access variables in parent scopes.
+				// So need to set them all to mutable (mutable is looking like a silly name
+				// the idea was to fix names for scopes like the global scope and those
+				// for with statements which can change - but in this case it has to be fixed
+				// because it can be accessed by dynamic code).
 				//
 				// There are tons of cases that this doesn't catch but I think it
 				// would be impossible to deal with them all. I can't even detect:
 				//	   window.eval('var x = 1');
 				// Although, that's not strictly standard ECMAscript.
-				//
-				// Maybe I should fix the names in surrounding scopes as well....
-				if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval')
-					currentScope.setMutable();
+
+				if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
+					for(var i = currentScope; i; i = i.parent)
+						i.setMutable();
+				}
 				break;
 			case "WITH":
 				node.scope = new Scope(currentScope, true);
@@ -259,21 +263,24 @@
 				if(v.fixed || v.name === "arguments") {
 					fixed.insert(name, v);
 				}
-				else if(/^_[A-Za-z\d]/.test(v.name)) {
-					// Do nothing for _names (I never generate clashing names)
-				}
-				else if(/\x24[a-zA-Z\x24_]/.test(v.name)) {
-					// Reserve the abbreviated version of the name.
-					// No need to reserve the actual name as I never generate a dollar name.
-					var abbr = v.name.replace(/((\x24+)([a-zA-Z\x24_]+))(\d*)/g,
-						function(name, prefix, dollars, letters, suffix) {
-							var length = dollars.length;
-							var start = length - Math.max(length - letters.length, 0);
-							return name.substr(start, length) + suffix;
-						}	
-					);
-					fixed.insert(abbr, v);
-				}
+				// Not bothering with 'special' names for now. Maybe deal with them optionally
+				// in the future.
+				//
+				//else if(/^_[A-Za-z\d]/.test(v.name)) {
+				//	// Do nothing for _names (I never generate clashing names)
+				//}
+				//else if(/\x24[a-zA-Z\x24_]/.test(v.name)) {
+				//	// Reserve the abbreviated version of the name.
+				//	// No need to reserve the actual name as I never generate a dollar name.
+				//	var abbr = v.name.replace(/((\x24+)([a-zA-Z\x24_]+))(\d*)/g,
+				//		function(name, prefix, dollars, letters, suffix) {
+				//			var length = dollars.length;
+				//			var start = length - Math.max(length - letters.length, 0);
+				//			return name.substr(start, length) + suffix;
+				//		}	
+				//	);
+				//	fixed.insert(abbr, v);
+				//}
 				else {
 					v.oldName = v.name;
 					delete v.name;
