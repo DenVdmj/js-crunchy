@@ -226,10 +226,16 @@ function nest(t, x, node, func, end) {
 }
 
 function Statements(t, x) {
-	var tt,nodes = [];
-	while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
-		nodes = nodes.concat(Statement(t, x));
-	return nodes;
+	++x.nestedLevel;
+	try {
+		var tt,nodes = [];
+		while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
+			nodes = nodes.concat(Statement(t, x));
+		return nodes;
+	}
+	finally {
+		--x.nestedLevel;
+	}
 }
 
 function Block(t, x) {
@@ -247,7 +253,13 @@ function OptionalBlock(t, x) {
 		return nodes;
 	}
 	else {
-		return Statement(t, x);
+		++x.nestedLevel;
+		try {
+			return Statement(t, x);
+		}
+		finally {
+			--x.nestedLevel;
+		}
 	}
 }
 
@@ -256,16 +268,6 @@ Crunchy.EXPRESSED_FORM = 1;
 Crunchy.STATEMENT_FORM = 2;
 
 function Statement(t, x) {
-	++x.nestedLevel;
-	try {
-		return Statement2(t, x);
-	}
-	finally {
-		--x.nestedLevel;
-	}
-}
-
-function Statement2(t, x) {
 	// TODO: Here we might have previously called 'peekOperator', and
 	// auto-inserted a semi-colon.
 	var i, label, nodes, n, n2, ss, tt = t.getOperand();
@@ -298,7 +300,8 @@ function Statement2(t, x) {
 		n.defaultIndex = -1;
 		x.stmtStack.push(n);
 		t.mustMatchOperand("LEFT_CURLY");
-		while ((tt = t.getOperand()) != "RIGHT_CURLY") {
+		++x.nestedLevel;
+		try { while ((tt = t.getOperand()) != "RIGHT_CURLY") {
 			switch (tt) {
 			  case "DEFAULT":
 				if (n.defaultIndex >= 0)
@@ -320,6 +323,9 @@ function Statement2(t, x) {
 				statements = statements.concat(Statement(t, x));
 			n2.setStatements(statements);
 			cases.push(n2);
+		}}
+		finally {
+			--x.nestedLevel;
 		}
 		n.setCases(cases);
 		x.stmtStack.pop();
@@ -481,7 +487,7 @@ function Statement2(t, x) {
 
 	  case "DEBUG_SEMICOLON":
 		var n = new Node(t);
-		n.setStatement(Statement2(t, x));
+		n.setStatement(Statement(t, x));
 		return [n];
 
 	  default:
@@ -496,7 +502,7 @@ function Statement2(t, x) {
 			t.getOperand();
 			n = new Node(t, "LABEL");
 			n.label = label;
-			n.setStatement(nest(t, x, n, Statement2));
+			n.setStatement(nest(t, x, n, Statement));
 			return [n];
 		}
 
