@@ -61,6 +61,7 @@ if(Crunchy.crunch("function x() { var spiffy; }").length > 19) print("Bad crunch
 if(Crunchy.crunch("function x(){var start_button}").length > 19) print("Bad crunching 4.");
 if(Crunchy.crunch("try{}catch(error){}").length > 15) print("Bad crunching 5.");
 if(Crunchy.crunch("if(a==b){if(c==d)z()}").length > 19) print("Bad crunching 6.");
+if(Crunchy.crunch("function x() { function foo() {} }").length > 28) print("Bad crunching 6.");
 
 runTest("var a=0;(function(){a=1})();", "test(a === 1)")
 runTest("var a=0\nfunction test(){}(function(){a=1})()", "test(a === 1)")

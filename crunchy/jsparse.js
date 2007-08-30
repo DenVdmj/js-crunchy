@@ -51,14 +51,17 @@ CCp.inForLoopInit = false;
 // TODO: Either pull this out of the prototype or delete it.
 CCp.ecmaStrictMode = false;
 
-function Script(t, x) {
+function Script(t) {
 	var n = new Node(t, "SCRIPT");
-	n.setBody(ParseCompilerContext(t, n, x));
+	n.setBody(ParseCompilerContext(t, n, false));
 	return n;
 }
 
-function ParseCompilerContext(t, n, x) {
+function ParseCompilerContext(t, n, inFunction) {
+	var x = new CompilerContext(inFunction);
+	++x.nestedLevel;
 	var nodes = Statements(t, x);
+	--x.nestedLevel;
 	n.funDecls = x.funDecls;
 	n.varDecls = x.varDecls;
 	return nodes;
@@ -226,40 +229,36 @@ function nest(t, x, node, func, end) {
 }
 
 function Statements(t, x) {
-	++x.nestedLevel;
-	try {
-		var tt,nodes = [];
-		while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
-			nodes = nodes.concat(Statement(t, x));
-		return nodes;
-	}
-	finally {
-		--x.nestedLevel;
-	}
+	var tt,nodes = [];
+	while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
+		nodes = nodes.concat(Statement(t, x));
+	return nodes;
 }
 
 function Block(t, x) {
 	t.mustMatchOperand("LEFT_CURLY");
+	++x.nestedLevel;
 	var nodes = Statements(t, x);
+	--x.nestedLevel;
 	t.mustMatchOperator("RIGHT_CURLY");
 	return nodes;
 }
 
 function OptionalBlock(t, x) {
-	if(t.peekOperand() == "LEFT_CURLY") {
-		t.mustMatchOperand("LEFT_CURLY");
-		var nodes = Statements(t, x);
-		t.mustMatchOperator("RIGHT_CURLY");
-		return nodes;
-	}
-	else {
-		++x.nestedLevel;
-		try {
+	++x.nestedLevel;
+	try {
+		if(t.peekOperand() == "LEFT_CURLY") {
+			t.mustMatchOperand("LEFT_CURLY");
+			var nodes = Statements(t, x);
+			t.mustMatchOperator("RIGHT_CURLY");
+			return nodes;
+		}
+		else {
 			return Statement(t, x);
 		}
-		finally {
-			--x.nestedLevel;
-		}
+	}
+	finally {
+		--x.nestedLevel;
 	}
 }
 
@@ -280,7 +279,9 @@ function Statement(t, x) {
 				x.nestedLevel > 1 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
 	  case "LEFT_CURLY":
 		n = new Node(t, "BLOCK");
+	    ++x.nestedLevel;
 		n.children = Statements(t, x);
+		--x.nestedLevel;
 		t.mustMatchOperator("RIGHT_CURLY");
 		return [n];
 
@@ -548,8 +549,7 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	f.params = params;
 
 	t.mustMatchOperator("LEFT_CURLY");
-	var x2 = new CompilerContext(true);
-	f.setBody(ParseCompilerContext(t, f, x2));
+	f.setBody(ParseCompilerContext(t, f, true));
 	t.mustMatchOperand("RIGHT_CURLY");
 	f.end = t.token().end;
 
@@ -923,8 +923,7 @@ loop:
 
 function parse(s, f, l) {
 	var t = new Crunchy.Tokenizer(s, f, l);
-	var x = new CompilerContext(false);
-	var n = Script(t, x);
+	var n = Script(t);
 	if (t.peekOperand() != "END")
 		throw t.newSyntaxError("Syntax error");
 	return n;
