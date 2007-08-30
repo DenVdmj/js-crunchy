@@ -59,9 +59,7 @@ function Script(t) {
 
 function ParseCompilerContext(t, n, inFunction) {
 	var x = new CompilerContext(inFunction);
-	++x.nestedLevel;
 	var nodes = Statements(t, x);
-	--x.nestedLevel;
 	n.funDecls = x.funDecls;
 	n.varDecls = x.varDecls;
 	return nodes;
@@ -276,7 +274,7 @@ function Statement(t, x) {
 	switch (tt) {
 	  case "FUNCTION":
 		return [FunctionDefinition(t, x, true,
-				x.nestedLevel > 1 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
+				x.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
 	  case "LEFT_CURLY":
 		n = new Node(t, "BLOCK");
 	    ++x.nestedLevel;
