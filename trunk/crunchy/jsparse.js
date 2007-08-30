@@ -481,7 +481,7 @@ function Statement2(t, x) {
 
 	  case "DEBUG_SEMICOLON":
 		var n = new Node(t);
-		n.setStatement(Statement(t, x));
+		n.setStatement(Statement2(t, x));
 		return [n];
 
 	  default:
@@ -496,7 +496,7 @@ function Statement2(t, x) {
 			t.getOperand();
 			n = new Node(t, "LABEL");
 			n.label = label;
-			n.setStatement(nest(t, x, n, Statement));
+			n.setStatement(nest(t, x, n, Statement2));
 			return [n];
 		}
 
