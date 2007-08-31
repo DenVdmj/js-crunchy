@@ -281,21 +281,20 @@ function Statement(t, x) {
 
 	  case "SWITCH":
 		n = new Node(t);
+
 		t.mustMatchOperator("LEFT_PAREN");
 		n.setDiscriminant(Expression(t, x));
 		t.mustMatchOperator("RIGHT_PAREN");
+
 		var cases = [];
 		t.mustMatchOperand("LEFT_CURLY");
 		++x.nestedLevel;
-		try { while ((tt = t.getOperand()) != "RIGHT_CURLY") {			
+		while ((tt = t.getOperand()) != "RIGHT_CURLY") {			
 			n2 = new Node(t);
-			switch (tt) {
-			case "DEFAULT":
-				break;
-			case "CASE":
+			if(tt == "CASE") {
 				n2.setCaseLabel(Expression(t, x, "COLON"));
-				break;
-			default:
+			}
+			else if(tt != "DEFAULT") {
 				throw t.newSyntaxError("Invalid switch case");
 			}
 			t.mustMatchOperand("COLON");
@@ -304,11 +303,10 @@ function Statement(t, x) {
 				statements = statements.concat(Statement(t, x));
 			n2.setStatements(statements);
 			cases.push(n2);
-		}}
-		finally {
-			--x.nestedLevel;
 		}
+		--x.nestedLevel;
 		n.setCases(cases);
+
 		return [n];
 
 	  case "FOR":
