@@ -285,23 +285,17 @@ function Statement(t, x) {
 		n.setDiscriminant(Expression(t, x));
 		t.mustMatchOperator("RIGHT_PAREN");
 		var cases = [];
-		n.defaultIndex = -1;
 		t.mustMatchOperand("LEFT_CURLY");
 		++x.nestedLevel;
-		try { while ((tt = t.getOperand()) != "RIGHT_CURLY") {
+		try { while ((tt = t.getOperand()) != "RIGHT_CURLY") {			
+			n2 = new Node(t);
 			switch (tt) {
-			  case "DEFAULT":
-				if (n.defaultIndex >= 0)
-					throw t.newSyntaxError("More than one switch default");
-				// FALL THROUGH
-			  case "CASE":
-				n2 = new Node(t);
-				if (tt == "DEFAULT")
-					n.defaultIndex = cases.length;
-				else
-					n2.setCaseLabel(Expression(t, x, "COLON"));
+			case "DEFAULT":
 				break;
-			  default:
+			case "CASE":
+				n2.setCaseLabel(Expression(t, x, "COLON"));
+				break;
+			default:
 				throw t.newSyntaxError("Invalid switch case");
 			}
 			t.mustMatchOperand("COLON");
