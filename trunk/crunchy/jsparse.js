@@ -223,30 +223,16 @@ function Statements(t, x) {
 }
 
 function Block(t, x) {
-	t.mustMatchOperand("LEFT_CURLY");
-	++x.nestedLevel;
-	var nodes = Statements(t, x);
-	--x.nestedLevel;
-	t.mustMatchOperator("RIGHT_CURLY");
-	return nodes;
+	if(t.peekOperand() != "LEFT_CURLY")
+		throw t.newSyntaxError("Code block expected.");
+	return OptionalBlock(t, x);
 }
 
 function OptionalBlock(t, x) {
 	++x.nestedLevel;
-	try {
-		if(t.peekOperand() == "LEFT_CURLY") {
-			t.mustMatchOperand("LEFT_CURLY");
-			var nodes = Statements(t, x);
-			t.mustMatchOperator("RIGHT_CURLY");
-			return nodes;
-		}
-		else {
-			return Statement(t, x);
-		}
-	}
-	finally {
-		--x.nestedLevel;
-	}
+	var s = Statement(t, x);
+	--x.nestedLevel;
+	return s;
 }
 
 Crunchy.DECLARED_FORM = 0;
