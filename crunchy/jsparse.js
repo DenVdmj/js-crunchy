@@ -38,7 +38,6 @@
 
 function CompilerContext(inFunction) {
 	this.inFunction = inFunction;
-	this.stmtStack = [];
 	this.nestedLevel = 0;
 	this.funDecls = [];
 	this.varDecls = [];
@@ -75,8 +74,8 @@ var NodeTypes = {
 	FOR_IN : [ "iterator", "object", "body" ], // also: isLoop = true (this is wrong, iterator is included in varDecl when varDecl is present).
 	WHILE : [ "condition", "body" ], // also: isLoop = true
 	DO : [ "body", "condition" ], // also: isLoop = true
-	BREAK : [], // also: label/target - should try to make target a node? 
-	CONTINUE : [], // also: label/target - should try to make target a node? 
+	BREAK : [], // also: label
+	CONTINUE : [], // also: label
 	TRY : [ "tryBlock", "catchClauses", "finallyBlock" ],
 	CATCH : [ "guard", "block" ], // also: node.varName
 	THROW : [ "exception" ],
@@ -216,16 +215,6 @@ Np.getSource = function () {
 
 Np.filename = function () { return this.tokenizer.filename; };
 
-// Statement stack and nested statement handler.
-function nest(t, x, node, func, end) {
-	// TODO: Only need to push for loops & labels.
-	x.stmtStack.push(node);
-	var n = func(t, x);
-	x.stmtStack.pop();
-	end && t.mustMatchOperand(end);
-	return n;
-}
-
 function Statements(t, x) {
 	var tt,nodes = [];
 	while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
@@ -297,7 +286,6 @@ function Statement(t, x) {
 		t.mustMatchOperator("RIGHT_PAREN");
 		var cases = [];
 		n.defaultIndex = -1;
-		x.stmtStack.push(n);
 		t.mustMatchOperand("LEFT_CURLY");
 		++x.nestedLevel;
 		try { while ((tt = t.getOperand()) != "RIGHT_CURLY") {
@@ -327,7 +315,6 @@ function Statement(t, x) {
 			--x.nestedLevel;
 		}
 		n.setCases(cases);
-		x.stmtStack.pop();
 		return [n];
 
 	  case "FOR":
@@ -366,21 +353,22 @@ function Statement(t, x) {
 			n.setUpdate((t.peekOperand() == "RIGHT_PAREN") ? null : Expression(t, x));
 		}
 		t.mustMatchOperator("RIGHT_PAREN");
-		n.setBody(nest(t, x, n, OptionalBlock));
+		n.setBody(OptionalBlock(t, x));
 		return [n];
 
 	  case "WHILE":
 		n = new Node(t);
 		n.isLoop = true;
 		n.setCondition(ParenExpression(t, x));
-		n.setBody(nest(t, x, n, OptionalBlock));
+		n.setBody(OptionalBlock(t, x));
 		return [n];
 
 	  case "DO":
 		n = new Node(t);
 		n.isLoop = true;
 		// TODO: I forget if the block really is optional.
-		n.setBody(nest(t, x, n, OptionalBlock, "WHILE"));
+		n.setBody(OptionalBlock(t, x));
+		t.mustMatchOperand("WHILE");
 		n.setCondition(ParenExpression(t, x));
 		if (!x.ecmaStrictMode) {
 			// <script language="JavaScript"> (without version hints) may need
@@ -398,24 +386,6 @@ function Statement(t, x) {
 			t.getOperand();
 			n.label = t.token().value;
 		}
-		ss = x.stmtStack;
-		i = ss.length;
-		label = n.label;
-		if (label) {
-			do {
-				if (--i < 0)
-					throw t.newSyntaxError("Label not found");
-			} while (ss[i].label != label);
-		} else {
-			do {
-				if (--i < 0) {
-					throw t.newSyntaxError("Invalid " + ((tt == "BREAK")
-														 ? "break"
-														 : "continue"));
-				}
-			} while (!ss[i].isLoop && (tt != "BREAK" || ss[i].type != "SWITCH"));
-		}
-		n.target = ss[i];
 		break;
 
 	  case "TRY":
@@ -468,7 +438,7 @@ function Statement(t, x) {
 		n = new Node(t);
 		n.setObject(ParenExpression(t, x));
 		// TODO: I forget if with statement requires curlies.
-		n.setBody(nest(t, x, n, OptionalBlock));
+		n.setBody(OptionalBlock(t, x));
 		return [n];
 
 	  case "VAR":
@@ -493,15 +463,10 @@ function Statement(t, x) {
 		if (tt == "IDENTIFIER" && t.peekOperator() == "COLON")
 		{
 			label = t.token().value;
-			ss = x.stmtStack;
-			for (i = ss.length-1; i >= 0; --i) {
-				if (ss[i].label == label)
-					throw t.newSyntaxError("Duplicate label");
-			}
 			t.getOperand();
 			n = new Node(t, "LABEL");
 			n.label = label;
-			n.setStatement(nest(t, x, n, Statement));
+			n.setStatement(Statement(t, x));
 			return [n];
 		}
 
