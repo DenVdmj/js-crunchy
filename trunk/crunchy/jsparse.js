@@ -264,13 +264,20 @@ function Statement(t, x) {
 	  case "FUNCTION":
 		return [FunctionDefinition(t, x, true,
 				x.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
+
 	  case "LEFT_CURLY":
-		n = new Node(t, "BLOCK");
-	    ++x.nestedLevel;
-		n.children = Statements(t, x);
+		++x.nestedLevel;
+		var children = Statements(t, x);
 		--x.nestedLevel;
 		t.mustMatchOperator("RIGHT_CURLY");
-		return [n];
+		if(x.nestedLevel == 0) {
+			n = new Node(t, "BLOCK");
+			n.children = children;
+			return [n];
+		}
+		else {
+			return children;
+		}
 
 	  case "IF":
 		n = new Node(t, "IF");
