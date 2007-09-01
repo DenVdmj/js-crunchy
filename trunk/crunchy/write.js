@@ -87,22 +87,6 @@ Crunchy.Writer.prototype = {
 		}
 	},
 
-	// TODO: This is such a nasty hack...
-	writeExpressionFunction : function() {
-		if(this.needEnd) {
-			this.result.push(';', '+'); this.prev = '+';
-			this.needEnd = false;
-			this.ended = false;
-			this.statementStart = false;
-		}
-		else if(this.statementStart) {
-			this.result.push('+'); this.prev = '+';
-			this.needEnd = false;
-			this.ended = false;
-			this.statementStart = false;
-		}
-	},
-
 	endStatement : function() {
 		this.ended = true;
 	},
@@ -495,8 +479,9 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeFunction : function(node) {
-		if(node.functionForm == Crunchy.EXPRESSED_FORM) this.writeExpressionFunction();
-
+		var needBrackets = node.functionForm == Crunchy.EXPRESSED_FORM &&
+			(this.needEnd || this.statementStart);
+		if(needBrackets) this.write('(');
 		this.write('function');
 		if(node.name2) this.write(node.name2.name);
 		this.write('(');
@@ -508,6 +493,8 @@ Crunchy.Writer.prototype = {
 		this.write('{');
 		this.writeStatements(node.body);
 		this.write('}');
+		if(needBrackets) this.write(')');
+
 		this.ended = node.functionForm != Crunchy.EXPRESSED_FORM;
 	},
 

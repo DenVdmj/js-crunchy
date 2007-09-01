@@ -194,6 +194,7 @@ runTest("var x = 0; for(;;) { if(x === 2) break; ++x; }", "test(x === 2)");
 
 runTest("var x = 0, y; for(y = (1 in [1,2]); y; y = false) { ++x; }", "test(x === 1)");
 
+runTest("var x=[0];(function() { return x;})()[0] = 1", "test(x[0] == 1)");
 
 /**/
 print("Finished!");
