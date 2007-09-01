@@ -1,10 +1,18 @@
 mkdir -p build
 
-time (rhino cruncher.js crunchy/crunchy.js > build/crunchy.js)
-rhino tests.js
-js tests.js
+#time (rhino cruncher.js crunchy/crunchy.js > build/crunchy.js)
+#rhino tests.js
+#js tests.js
+#
+#rhino cruncher.js crunchy/web.js > build/crunchy-web.js
 
-rhino cruncher.js crunchy/web.js > build/crunchy-web.js
+cat crunch-stream.js crunchy/crunchy.js crunchy/common.js \
+    crunchy/jsdefs.js crunchy/tokenizer.js crunchy/jsparse.js \
+    crunchy/crunch.js crunchy/renameVariables.js crunchy/write.js |
+    grep -v "^[ \t]*load[ \t]*(" |
+    ./crunch-stream.js > build/crunch
+chmod +x build/crunch
+sudo install build/crunch /usr/local/bin
 
 #time (rhino cruncher.js cruncher.js > build/cruncher.js)
 #cd build
