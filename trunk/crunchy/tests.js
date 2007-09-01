@@ -87,7 +87,6 @@ runTest("var x=2*(3+1)", "test(x === 8)");
 runTest("var x=(3+1)*2", "test(x === 8)");
 runTest("var x=((3+1)*2,0)", "test(x === 0)");
 
-//runTest("var x=1,y=2; (x=y)=3;", "test(x === 3 && y === 2)");
 runTest("var x=1,y=2; x=(y=3);", "test(x === 3 && y === 3)");
 runTest("var x=1,y=2; x=y=3;", "test(x === 3 && y === 3)");
 
@@ -96,8 +95,6 @@ runTest("function foo() { var x = { abcd : { efgh : 25 } }, abcd=1, efgh=2; retu
 runTest("var x = true ? true ? 1 : 2 : 3", "test(x === 1)");
 runTest("var x = 0; if(!(x=1))x=2;", "test(x === 1)");
 runTest("var x = -(2+3)", "test(x === -5)");
-// Oooo. this doesn't work.
-// runTest("var x;++(x=3)", "test(x === 4)");
 
 runTest("var x=0; if(false){if(true) x=1} else x=2;", "test(x === 2)");
 
@@ -115,8 +112,6 @@ runTest("var x=new Function()", "test(typeof(x) === 'function')");
 runTest("var x=new Function()()", "test(typeof(x) === 'undefined')");
 runTest("var x=(new Function)()", "test(typeof(x) === 'undefined')");
 
-//runTest("var x=10;var y=---x", "test(y === -11 && x === -11)");
-//runTest("var x=10;var y=--(-x)", "test(y === -11 && x === -11)");
 runTest("var x=10;var y=-(--x)", "test(y === -9 && x === 9)");
 runTest("var x=10;var y=- --x", "test(y === -9 && x === 9)");
 runTest("var x=10;var y=-x--", "test(y === -10 && x === 9)");
@@ -140,7 +135,7 @@ runTest("function test() { try { var x = 1; throw 1; } catch(e) { return x; } re
 runTest("var x = \"\"", "test(x === \"\")");
 
 // Rhino can't deal with this....
-//runTest("var x = 'a/c'.replace(/[/]/, 'b')", "test(x === 'abc')");
+runTest("var x = 'a/c'.replace(/[/]/, 'b')", "test(x === 'abc')");
 
 runTest("function a(){var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,BB,CC,DD,EE,FF,GG,HH,II,JJ,KK,LL,MM,NN,OO,PP,QQ,RR,SS,TT,UU,VV,WW,XX,YY,ZZ}", "");
 
