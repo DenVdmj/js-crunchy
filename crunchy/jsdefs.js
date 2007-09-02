@@ -215,7 +215,7 @@ for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 }
 
 Crunchy.lookupKeyword = function(keyword) {
-	return keywords[keyword];
+	return keywords[keyword] || false;
 }
 
 // Map assignment operators to their indexes in the tokens array.
