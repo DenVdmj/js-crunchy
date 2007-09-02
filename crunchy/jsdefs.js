@@ -155,6 +155,7 @@ Crunchy.opTypeNames = {
 	')':	"RIGHT_PAREN"
 };
 
+// TODO: Add missing precedences (INDEX? Any others?)
 Crunchy.opPrecedence = {
 	SEMICOLON: 0,
 	COMMA: 1,
