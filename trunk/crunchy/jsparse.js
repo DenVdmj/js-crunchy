@@ -628,9 +628,7 @@ function ReduceExpression(t, operators, operands) {
 	return n;
 }
 
-function ExpressionAssignHookColon(t, x, tt, state, operators, operands) {
-	if (state.scanOperand) return false;
-
+function OperatorAssignHookColon(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative ASSIGN and HOOK/COLON.
 	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
 	   (tt == "COLON" && (operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))) {
@@ -653,102 +651,88 @@ function ExpressionAssignHookColon(t, x, tt, state, operators, operands) {
 	return true;
 }
 
-function ExpressionOperator(t, x, tt, state, operators, operands) {
+function BinaryOperator(t, x, tt, state, operators, operands) {
 	// An in operator should not be parsed if we're parsing the head of
 	// a for (...) loop, unless it is in the then part of a conditional
 	// expression, or parenthesized somehow.
 	if(tt == "IN" && (x.inForLoopInit && !x.hookLevel &&
 		!x.bracketLevel && !x.curlyLevel && !x.parenLevel))
 			return false;
-	if (!state.scanOperand) {
-		while (Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
-			ReduceExpression(t, operators, operands);
-		if (tt == "DOT") {
-			var n = new OperatorNode(t, "DOT");
-			n.pushOperand(operands.pop());
-			t.mustMatchOperand("IDENTIFIER");
-			n.pushOperand(new Node(t, "MEMBER_IDENTIFIER"));
-			operands.push(n);
-		} else {
-			operators.push(new OperatorNode(t));
-			state.scanOperand = true;
-		}
-		return true;
-	}
-	else if(tt != 'PLUS' && tt != 'MINUS') {
-		return false;
-	}
-	else {
-		tt = 'UNARY_' + tt;
-		return ExpressionUnaryOperators(t, x, tt, state, operators, operands);
-	}
-}
 
-function ExpressionUnaryOperators(t, x, tt, state, operators, operands) {
-	if (!state.scanOperand) return false;
-	operators.push(new OperatorNode(t, tt));
-	return true;	
-}
-
-function ExpressionPrePostOperators(t, x, tt, state, operators, operands) {
-	if (state.scanOperand) {
-		operators.push(new OperatorNode(t));  // prefix increment or decrement
-	} else {
-		// Use >, not >=, so postfix has higher precedence than prefix.
-		while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
-			ReduceExpression(t, operators, operands);
-		var n = new OperatorNode(t, tt);
+	while (Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
+		ReduceExpression(t, operators, operands);
+	if (tt == "DOT") {
+		var n = new OperatorNode(t, "DOT");
 		n.pushOperand(operands.pop());
-		n.postfix = true;
+		t.mustMatchOperand("IDENTIFIER");
+		n.pushOperand(new Node(t, "MEMBER_IDENTIFIER"));
 		operands.push(n);
+	} else {
+		operators.push(new OperatorNode(t));
+		state.scanOperand = true;
 	}
 	return true;
 }
 
+function UnaryOperator(t, x, tt, state, operators, operands) {
+	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
+	operators.push(new OperatorNode(t, tt));
+	return true;	
+}
+
+function PostOperators(t, x, tt, state, operators, operands) {
+	// Use >, not >=, so postfix has higher precedence than prefix.
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
+		ReduceExpression(t, operators, operands);
+	var n = new OperatorNode(t, tt);
+	n.pushOperand(operands.pop());
+	n.postfix = true;
+	operands.push(n);
+	return true;
+}
+
 function ExpressionFunction(t, x, tt, state, operators, operands) {
-	if (!state.scanOperand) return false;
 	operands.push(FunctionDefinition(t, x, false, Crunchy.EXPRESSED_FORM));
 	state.scanOperand = false;
 	return true;
 }
 
 function ExpressionOperand(t, x, tt, state, operators, operands) {
-	if (!state.scanOperand) return false;
 	operands.push(new Node(t));
 	state.scanOperand = false;
 	return true;
 }
 
-function ExpressionLeftBracket(t, x, tt, state, operators, operands) {
-	if (state.scanOperand) {
-		// Array initialiser.  Parse using recursive descent, as the
-		// sub-grammar here is not an operator grammar.
-		var n = new OperatorNode(t, "ARRAY_INIT");
-		while ((tt = t.peekOperand()) != "RIGHT_BRACKET") {
-			if (tt == "COMMA") {
-				t.getOperand();
-				n.pushOperand(new Node(t, "EMPTY"));
-				continue;
-			}
-			n.pushOperand(Expression(t, x, "COMMA"));
-			if (!t.matchOperator("COMMA"))
-				break;
+function ExpressionArrayInit(t, x, tt, state, operators, operands) {
+	// Array initialiser.  Parse using recursive descent, as the
+	// sub-grammar here is not an operator grammar.
+	var n = new OperatorNode(t, "ARRAY_INIT");
+	while ((tt = t.peekOperand()) != "RIGHT_BRACKET") {
+		if (tt == "COMMA") {
+			t.getOperand();
+			n.pushOperand(new Node(t, "EMPTY"));
+			continue;
 		}
-		t.mustMatchOperator("RIGHT_BRACKET");
-		operands.push(n);
-		state.scanOperand = false;
-	} else {
-		// Property indexing operator.
-		operators.push(new OperatorNode(t, "INDEX"));
-		state.scanOperand = true;
-		++x.bracketLevel;
+		n.pushOperand(Expression(t, x, "COMMA"));
+		if (!t.matchOperator("COMMA"))
+			break;
 	}
+	t.mustMatchOperator("RIGHT_BRACKET");
+	operands.push(n);
+	state.scanOperand = false;
+	return true;
+}
+
+function ExpressionIndex(t, x, tt, state, operators, operands) {
+	// Property indexing operator.
+	operators.push(new OperatorNode(t, "INDEX"));
+	state.scanOperand = true;
+	++x.bracketLevel;
 	return true;
 }
 
 function ExpressionRightBracket(t, x, tt, state, operators, operands) {
-	if (state.scanOperand || x.bracketLevel == state.bl)
-		return false;
+	if (x.bracketLevel == state.bl) return false;
 	while (ReduceExpression(t, operators, operands).type != "INDEX")
 		continue;
 	--x.bracketLevel;
@@ -756,7 +740,6 @@ function ExpressionRightBracket(t, x, tt, state, operators, operands) {
 }
 
 function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
-	if (!state.scanOperand)	return false;
 	// Object initialiser.	As for array initialisers (see above),
 	// parse using recursive descent.
 	++x.curlyLevel;
@@ -802,48 +785,49 @@ function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
 }
 
 function ExpressionRightCurly(t, x, tt, state, operators, operands) {
-	if (!state.scanOperand && x.curlyLevel != state.cl)
-		throw "PANIC: right curly botch";
+	if (x.curlyLevel != state.cl) throw "PANIC: right curly botch";
 	return false;
 }
 
-function ExpressionLeftParen(t, x, tt, state, operators, operands) {
-	if (state.scanOperand) {
-		operators.push(new OperatorNode(t, "GROUP"));
-	} else {
-		while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
-			ReduceExpression(t, operators, operands);
+function ExpressionGroup(t, x, tt, state, operators, operands) {
+	operators.push(new OperatorNode(t, "GROUP"));
+	++x.parenLevel;
+	return true;
+}
 
-		// Handle () now, to regularize the n-ary case for n > 0.
-		// We must set scanOperand in case there are arguments and
-		// the first one is a regexp or unary+/-.
-		var n = operators.top();
-		state.scanOperand = true;
-		if (t.matchOperand("RIGHT_PAREN")) {
-			if (n.type == "NEW") {
-				--operators.length;
-				n.pushOperand(operands.pop());
-			} else {
-				n = new OperatorNode(t, "CALL");
-				n.pushOperand(operands.pop());
-				n.pushOperand(new OperatorNode(t, "LIST"));
-			}
-			operands.push(n);
-			state.scanOperand = false;
-			return true;
+function ExpressionCall(t, x, tt, state, operators, operands) {
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
+		ReduceExpression(t, operators, operands);
+
+	// Handle () now, to regularize the n-ary case for n > 0.
+	// We must set scanOperand in case there are arguments and
+	// the first one is a regexp or unary+/-.
+	var n = operators.top();
+	state.scanOperand = true;
+	if (t.matchOperand("RIGHT_PAREN")) {
+		if (n.type == "NEW") {
+			--operators.length;
+			n.pushOperand(operands.pop());
+		} else {
+			n = new OperatorNode(t, "CALL");
+			n.pushOperand(operands.pop());
+			n.pushOperand(new OperatorNode(t, "LIST"));
 		}
-		if (n.type == "NEW")
-			n.type = "NEW_WITH_ARGS";
-		else
-			operators.push(new OperatorNode(t, "CALL"));
+		operands.push(n);
+		state.scanOperand = false;
+		return true;
 	}
+	if (n.type == "NEW")
+		n.type = "NEW_WITH_ARGS";
+	else
+		operators.push(new OperatorNode(t, "CALL"));
+
 	++x.parenLevel;
 	return true;
 }
 
 function ExpressionRightParen(t, x, tt, state, operators, operands) {
-	if (state.scanOperand || x.parenLevel == state.pl)
-		return false;
+	if (x.parenLevel == state.pl) return false;
 	while ((tt = ReduceExpression(t, operators, operands).type) != "GROUP" && tt != "CALL" &&
 		   tt != "NEW_WITH_ARGS") {
 		continue;
@@ -867,46 +851,17 @@ function ExpressionRightParen(t, x, tt, state, operators, operands) {
 	return true;
 }
 
-var ExpressionMethods = {
-	"ASSIGN": ExpressionAssignHookColon,
-	"HOOK": ExpressionAssignHookColon,
-	"COLON": ExpressionAssignHookColon,
-	"IN": ExpressionOperator,
-	// Treat comma as left-associative so reduce can fold left-heavy
-	// COMMA trees into a single array.
-	// FALL THROUGH
-	"COMMA": ExpressionOperator,
-	"OR": ExpressionOperator,
-	"AND": ExpressionOperator,
-	"BITWISE_OR": ExpressionOperator,
-	"BITWISE_XOR": ExpressionOperator,
-	"BITWISE_AND": ExpressionOperator,
-	"EQ": ExpressionOperator,
-	"NE": ExpressionOperator,
-	"STRICT_EQ": ExpressionOperator,
-	"STRICT_NE": ExpressionOperator,
-	"LT": ExpressionOperator,
-	"LE": ExpressionOperator,
-	"GE": ExpressionOperator,
-	"GT": ExpressionOperator,
-	"INSTANCEOF": ExpressionOperator,
-	"LSH": ExpressionOperator,
-	"RSH": ExpressionOperator,
-	"URSH": ExpressionOperator,
-	"PLUS": ExpressionOperator,
-	"MINUS": ExpressionOperator,
-	"MUL": ExpressionOperator,
-	"DIV": ExpressionOperator,
-	"MOD": ExpressionOperator,
-	"DOT": ExpressionOperator,
-	"DELETE": ExpressionUnaryOperators,
-	"VOID": ExpressionUnaryOperators,
-	"TYPEOF": ExpressionUnaryOperators,
-	"NOT": ExpressionUnaryOperators,
-	"BITWISE_NOT": ExpressionUnaryOperators,
-	"NEW": ExpressionUnaryOperators,
-	"INCREMENT": ExpressionPrePostOperators,
-	"DECREMENT": ExpressionPrePostOperators,
+var OperandMethods = {
+	"PLUS": UnaryOperator,
+	"MINUS": UnaryOperator,
+	"DELETE": UnaryOperator,
+	"VOID": UnaryOperator,
+	"TYPEOF": UnaryOperator,
+	"NOT": UnaryOperator,
+	"BITWISE_NOT": UnaryOperator,
+	"NEW": UnaryOperator,
+	"INCREMENT": UnaryOperator,
+	"DECREMENT": UnaryOperator,
 	"FUNCTION": ExpressionFunction,
 	"NULL": ExpressionOperand,
 	"THIS": ExpressionOperand,
@@ -916,11 +871,49 @@ var ExpressionMethods = {
 	"NUMBER": ExpressionOperand,
 	"STRING": ExpressionOperand,
 	"REGEXP": ExpressionOperand,
-	"LEFT_BRACKET": ExpressionLeftBracket,
-	"RIGHT_BRACKET": ExpressionRightBracket,
+	"LEFT_BRACKET": ExpressionArrayInit,
 	"LEFT_CURLY": ExpressionLeftCurly,
 	"RIGHT_CURLY": ExpressionRightCurly,
-	"LEFT_PAREN": ExpressionLeftParen,
+	"LEFT_PAREN": ExpressionGroup
+}
+
+var OperatorMethods = {
+	"ASSIGN": OperatorAssignHookColon,
+	"HOOK": OperatorAssignHookColon,
+	"COLON": OperatorAssignHookColon,
+	"IN": BinaryOperator,
+	// Treat comma as left-associative so reduce can fold left-heavy
+	// COMMA trees into a single array.
+	// FALL THROUGH
+	"COMMA": BinaryOperator,
+	"OR": BinaryOperator,
+	"AND": BinaryOperator,
+	"BITWISE_OR": BinaryOperator,
+	"BITWISE_XOR": BinaryOperator,
+	"BITWISE_AND": BinaryOperator,
+	"EQ": BinaryOperator,
+	"NE": BinaryOperator,
+	"STRICT_EQ": BinaryOperator,
+	"STRICT_NE": BinaryOperator,
+	"LT": BinaryOperator,
+	"LE": BinaryOperator,
+	"GE": BinaryOperator,
+	"GT": BinaryOperator,
+	"INSTANCEOF": BinaryOperator,
+	"LSH": BinaryOperator,
+	"RSH": BinaryOperator,
+	"URSH": BinaryOperator,
+	"PLUS": BinaryOperator,
+	"MINUS": BinaryOperator,
+	"MUL": BinaryOperator,
+	"DIV": BinaryOperator,
+	"MOD": BinaryOperator,
+	"DOT": BinaryOperator,
+	"INCREMENT": PostOperators,
+	"DECREMENT": PostOperators,
+	"LEFT_BRACKET": ExpressionIndex,
+	"RIGHT_BRACKET": ExpressionRightBracket,
+	"LEFT_PAREN": ExpressionCall,
 	"RIGHT_PAREN": ExpressionRightParen
 }
 
@@ -937,7 +930,7 @@ function Expression(t, x, stop) {
 			break;
 		}
 
-		var f = ExpressionMethods[tt];
+		var f = (state.scanOperand ? OperandMethods : OperatorMethods)[tt];
 		if(!f) break;
 		if(!f(t, x, tt, state, operators, operands)) break;
 	}
