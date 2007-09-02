@@ -598,6 +598,106 @@ function ParenExpression(t, x) {
 	return n;
 }
 
+function Expression(t, x, stop) {
+	var tt, operators = [], operands = [];
+	var state = { bl : x.bracketLevel, cl : x.curlyLevel, pl : x.parenLevel, hl : x.hookLevel, scanOperand : true };
+
+	while ((tt = t.getToken(state.scanOperand)) != "END") {
+		if (tt == stop &&
+			x.bracketLevel == state.bl && x.curlyLevel == state.cl && x.parenLevel == state.pl &&
+			x.hookLevel == state.hl) {
+			// Stop only if tt matches the optional stop parameter, and that
+			// token is not quoted by some kind of bracket.
+			break;
+		}
+
+		var f = (state.scanOperand ? OperandMethods : OperatorMethods)[tt];
+		if(!f) break;
+		if(!f(t, x, tt, state, operators, operands)) break;
+	}
+
+	if (x.hookLevel != state.hl)
+		throw t.newSyntaxError("Missing : after ?");
+	if (x.parenLevel != state.pl)
+		throw t.newSyntaxError("Missing ) in parenthetical");
+	if (x.bracketLevel != state.bl)
+		throw t.newSyntaxError("Missing ] in index expression");
+	if (state.scanOperand)
+		throw t.newSyntaxError("Missing operand");
+
+	// Resume default mode, scanning for operands, not operators.
+	t.unget();
+	while (operators.length)
+		ReduceExpression(t, operators, operands);
+	return operands.pop();
+}
+
+var OperandMethods = {
+	"PLUS": UnaryOperator,
+	"MINUS": UnaryOperator,
+	"DELETE": UnaryOperator,
+	"VOID": UnaryOperator,
+	"TYPEOF": UnaryOperator,
+	"NOT": UnaryOperator,
+	"BITWISE_NOT": UnaryOperator,
+	"NEW": UnaryOperator,
+	"INCREMENT": UnaryOperator,
+	"DECREMENT": UnaryOperator,
+	"FUNCTION": ExpressionFunction,
+	"NULL": ExpressionOperand,
+	"THIS": ExpressionOperand,
+	"TRUE": ExpressionOperand,
+	"FALSE": ExpressionOperand,
+	"IDENTIFIER": ExpressionOperand,
+	"NUMBER": ExpressionOperand,
+	"STRING": ExpressionOperand,
+	"REGEXP": ExpressionOperand,
+	"LEFT_BRACKET": ExpressionArrayInit,
+	"LEFT_CURLY": ExpressionLeftCurly,
+	"RIGHT_CURLY": ExpressionRightCurly,
+	"LEFT_PAREN": ExpressionGroup
+}
+
+var OperatorMethods = {
+	"ASSIGN": OperatorAssignHookColon,
+	"HOOK": OperatorAssignHookColon,
+	"COLON": OperatorAssignHookColon,
+	"IN": BinaryOperator,
+	// Treat comma as left-associative so reduce can fold left-heavy
+	// COMMA trees into a single array.
+	// FALL THROUGH
+	"COMMA": BinaryOperator,
+	"OR": BinaryOperator,
+	"AND": BinaryOperator,
+	"BITWISE_OR": BinaryOperator,
+	"BITWISE_XOR": BinaryOperator,
+	"BITWISE_AND": BinaryOperator,
+	"EQ": BinaryOperator,
+	"NE": BinaryOperator,
+	"STRICT_EQ": BinaryOperator,
+	"STRICT_NE": BinaryOperator,
+	"LT": BinaryOperator,
+	"LE": BinaryOperator,
+	"GE": BinaryOperator,
+	"GT": BinaryOperator,
+	"INSTANCEOF": BinaryOperator,
+	"LSH": BinaryOperator,
+	"RSH": BinaryOperator,
+	"URSH": BinaryOperator,
+	"PLUS": BinaryOperator,
+	"MINUS": BinaryOperator,
+	"MUL": BinaryOperator,
+	"DIV": BinaryOperator,
+	"MOD": BinaryOperator,
+	"DOT": BinaryOperator,
+	"INCREMENT": PostOperators,
+	"DECREMENT": PostOperators,
+	"LEFT_BRACKET": ExpressionIndex,
+	"RIGHT_BRACKET": ExpressionRightBracket,
+	"LEFT_PAREN": ExpressionCall,
+	"RIGHT_PAREN": ExpressionRightParen
+}
+
 function ReduceExpression(t, operators, operands) {
 	var n = operators.pop();
 	var op = n.type;
@@ -677,7 +777,7 @@ function BinaryOperator(t, x, tt, state, operators, operands) {
 function UnaryOperator(t, x, tt, state, operators, operands) {
 	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
 	operators.push(new OperatorNode(t, tt));
-	return true;	
+	return true;
 }
 
 function PostOperators(t, x, tt, state, operators, operands) {
@@ -849,106 +949,6 @@ function ExpressionRightParen(t, x, tt, state, operators, operands) {
 	}
 	--x.parenLevel;
 	return true;
-}
-
-var OperandMethods = {
-	"PLUS": UnaryOperator,
-	"MINUS": UnaryOperator,
-	"DELETE": UnaryOperator,
-	"VOID": UnaryOperator,
-	"TYPEOF": UnaryOperator,
-	"NOT": UnaryOperator,
-	"BITWISE_NOT": UnaryOperator,
-	"NEW": UnaryOperator,
-	"INCREMENT": UnaryOperator,
-	"DECREMENT": UnaryOperator,
-	"FUNCTION": ExpressionFunction,
-	"NULL": ExpressionOperand,
-	"THIS": ExpressionOperand,
-	"TRUE": ExpressionOperand,
-	"FALSE": ExpressionOperand,
-	"IDENTIFIER": ExpressionOperand,
-	"NUMBER": ExpressionOperand,
-	"STRING": ExpressionOperand,
-	"REGEXP": ExpressionOperand,
-	"LEFT_BRACKET": ExpressionArrayInit,
-	"LEFT_CURLY": ExpressionLeftCurly,
-	"RIGHT_CURLY": ExpressionRightCurly,
-	"LEFT_PAREN": ExpressionGroup
-}
-
-var OperatorMethods = {
-	"ASSIGN": OperatorAssignHookColon,
-	"HOOK": OperatorAssignHookColon,
-	"COLON": OperatorAssignHookColon,
-	"IN": BinaryOperator,
-	// Treat comma as left-associative so reduce can fold left-heavy
-	// COMMA trees into a single array.
-	// FALL THROUGH
-	"COMMA": BinaryOperator,
-	"OR": BinaryOperator,
-	"AND": BinaryOperator,
-	"BITWISE_OR": BinaryOperator,
-	"BITWISE_XOR": BinaryOperator,
-	"BITWISE_AND": BinaryOperator,
-	"EQ": BinaryOperator,
-	"NE": BinaryOperator,
-	"STRICT_EQ": BinaryOperator,
-	"STRICT_NE": BinaryOperator,
-	"LT": BinaryOperator,
-	"LE": BinaryOperator,
-	"GE": BinaryOperator,
-	"GT": BinaryOperator,
-	"INSTANCEOF": BinaryOperator,
-	"LSH": BinaryOperator,
-	"RSH": BinaryOperator,
-	"URSH": BinaryOperator,
-	"PLUS": BinaryOperator,
-	"MINUS": BinaryOperator,
-	"MUL": BinaryOperator,
-	"DIV": BinaryOperator,
-	"MOD": BinaryOperator,
-	"DOT": BinaryOperator,
-	"INCREMENT": PostOperators,
-	"DECREMENT": PostOperators,
-	"LEFT_BRACKET": ExpressionIndex,
-	"RIGHT_BRACKET": ExpressionRightBracket,
-	"LEFT_PAREN": ExpressionCall,
-	"RIGHT_PAREN": ExpressionRightParen
-}
-
-function Expression(t, x, stop) {
-	var tt, operators = [], operands = [];
-	var state = { bl : x.bracketLevel, cl : x.curlyLevel, pl : x.parenLevel, hl : x.hookLevel, scanOperand : true };
-
-	while ((tt = t.getToken(state.scanOperand)) != "END") {
-		if (tt == stop &&
-			x.bracketLevel == state.bl && x.curlyLevel == state.cl && x.parenLevel == state.pl &&
-			x.hookLevel == state.hl) {
-			// Stop only if tt matches the optional stop parameter, and that
-			// token is not quoted by some kind of bracket.
-			break;
-		}
-
-		var f = (state.scanOperand ? OperandMethods : OperatorMethods)[tt];
-		if(!f) break;
-		if(!f(t, x, tt, state, operators, operands)) break;
-	}
-
-	if (x.hookLevel != state.hl)
-		throw t.newSyntaxError("Missing : after ?");
-	if (x.parenLevel != state.pl)
-		throw t.newSyntaxError("Missing ) in parenthetical");
-	if (x.bracketLevel != state.bl)
-		throw t.newSyntaxError("Missing ] in index expression");
-	if (state.scanOperand)
-		throw t.newSyntaxError("Missing operand");
-
-	// Resume default mode, scanning for operands, not operators.
-	t.unget();
-	while (operators.length)
-		ReduceExpression(t, operators, operands);
-	return operands.pop();
 }
 
 function parse(s, f, l) {
