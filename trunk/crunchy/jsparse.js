@@ -633,16 +633,16 @@ function Expression(t, x, stop) {
 }
 
 var OperandMethods = {
-	"PLUS": UnaryOperator,
-	"MINUS": UnaryOperator,
-	"DELETE": UnaryOperator,
-	"VOID": UnaryOperator,
-	"TYPEOF": UnaryOperator,
-	"NOT": UnaryOperator,
-	"BITWISE_NOT": UnaryOperator,
-	"NEW": UnaryOperator,
-	"INCREMENT": UnaryOperator,
-	"DECREMENT": UnaryOperator,
+	"PLUS": ExpressionUnaryOperator,
+	"MINUS": ExpressionUnaryOperator,
+	"DELETE": ExpressionUnaryOperator,
+	"VOID": ExpressionUnaryOperator,
+	"TYPEOF": ExpressionUnaryOperator,
+	"NOT": ExpressionUnaryOperator,
+	"BITWISE_NOT": ExpressionUnaryOperator,
+	"NEW": ExpressionUnaryOperator,
+	"INCREMENT": ExpressionUnaryOperator,
+	"DECREMENT": ExpressionUnaryOperator,
 	"FUNCTION": ExpressionFunction,
 	"NULL": ExpressionOperand,
 	"THIS": ExpressionOperand,
@@ -658,7 +658,7 @@ var OperandMethods = {
 	"LEFT_PAREN": ExpressionGroup
 }
 
-function UnaryOperator(t, x, tt, state, operators, operands) {
+function ExpressionUnaryOperator(t, x, tt, state, operators, operands) {
 	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
 	operators.push(new OperatorNode(t, tt));
 	return true;
@@ -753,46 +753,46 @@ function ExpressionGroup(t, x, tt, state, operators, operands) {
 }
 
 var OperatorMethods = {
-	"ASSIGN": OperatorAssignHookColon,
-	"HOOK": OperatorAssignHookColon,
-	"COLON": OperatorAssignHookColon,
-	"IN": BinaryOperator,
+	"ASSIGN": ExpressionAssignHookColon,
+	"HOOK": ExpressionAssignHookColon,
+	"COLON": ExpressionAssignHookColon,
+	"IN": ExpressionBinaryOperator,
 	// Treat comma as left-associative so reduce can fold left-heavy
 	// COMMA trees into a single array.
 	// FALL THROUGH
-	"COMMA": BinaryOperator,
-	"OR": BinaryOperator,
-	"AND": BinaryOperator,
-	"BITWISE_OR": BinaryOperator,
-	"BITWISE_XOR": BinaryOperator,
-	"BITWISE_AND": BinaryOperator,
-	"EQ": BinaryOperator,
-	"NE": BinaryOperator,
-	"STRICT_EQ": BinaryOperator,
-	"STRICT_NE": BinaryOperator,
-	"LT": BinaryOperator,
-	"LE": BinaryOperator,
-	"GE": BinaryOperator,
-	"GT": BinaryOperator,
-	"INSTANCEOF": BinaryOperator,
-	"LSH": BinaryOperator,
-	"RSH": BinaryOperator,
-	"URSH": BinaryOperator,
-	"PLUS": BinaryOperator,
-	"MINUS": BinaryOperator,
-	"MUL": BinaryOperator,
-	"DIV": BinaryOperator,
-	"MOD": BinaryOperator,
-	"DOT": BinaryOperator,
-	"INCREMENT": PostOperators,
-	"DECREMENT": PostOperators,
+	"COMMA": ExpressionBinaryOperator,
+	"OR": ExpressionBinaryOperator,
+	"AND": ExpressionBinaryOperator,
+	"BITWISE_OR": ExpressionBinaryOperator,
+	"BITWISE_XOR": ExpressionBinaryOperator,
+	"BITWISE_AND": ExpressionBinaryOperator,
+	"EQ": ExpressionBinaryOperator,
+	"NE": ExpressionBinaryOperator,
+	"STRICT_EQ": ExpressionBinaryOperator,
+	"STRICT_NE": ExpressionBinaryOperator,
+	"LT": ExpressionBinaryOperator,
+	"LE": ExpressionBinaryOperator,
+	"GE": ExpressionBinaryOperator,
+	"GT": ExpressionBinaryOperator,
+	"INSTANCEOF": ExpressionBinaryOperator,
+	"LSH": ExpressionBinaryOperator,
+	"RSH": ExpressionBinaryOperator,
+	"URSH": ExpressionBinaryOperator,
+	"PLUS": ExpressionBinaryOperator,
+	"MINUS": ExpressionBinaryOperator,
+	"MUL": ExpressionBinaryOperator,
+	"DIV": ExpressionBinaryOperator,
+	"MOD": ExpressionBinaryOperator,
+	"DOT": ExpressionBinaryOperator,
+	"INCREMENT": ExpressionPostOperator,
+	"DECREMENT": ExpressionPostOperator,
 	"LEFT_BRACKET": ExpressionIndex,
 	"RIGHT_BRACKET": ExpressionRightBracket,
 	"LEFT_PAREN": ExpressionCall,
 	"RIGHT_PAREN": ExpressionRightParen
 }
 
-function OperatorAssignHookColon(t, x, tt, state, operators, operands) {
+function ExpressionAssignHookColon(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative ASSIGN and HOOK/COLON.
 	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
 	   (tt == "COLON" && (operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))) {
@@ -815,7 +815,7 @@ function OperatorAssignHookColon(t, x, tt, state, operators, operands) {
 	return true;
 }
 
-function BinaryOperator(t, x, tt, state, operators, operands) {
+function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 	// An in operator should not be parsed if we're parsing the head of
 	// a for (...) loop, unless it is in the then part of a conditional
 	// expression, or parenthesized somehow.
@@ -838,7 +838,7 @@ function BinaryOperator(t, x, tt, state, operators, operands) {
 	return true;
 }
 
-function PostOperators(t, x, tt, state, operators, operands) {
+function ExpressionPostOperator(t, x, tt, state, operators, operands) {
 	// Use >, not >=, so postfix has higher precedence than prefix.
 	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 		ReduceExpression(t, operators, operands);
