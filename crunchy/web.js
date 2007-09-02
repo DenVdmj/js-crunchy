@@ -21,14 +21,14 @@ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABI
 CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 */
-DomBuilder = {
+var DomBuilder = {
 	IE_TRANSLATIONS : {
 		'class' : 'className',
 		'for' : 'htmlFor'
 	},
 	ieAttrSet : function(a, i, el) {
 		var trans;
-		if (trans = this.IE_TRANSLATIONS[i]) el[trans] = a[i];
+		if ((trans = this.IE_TRANSLATIONS[i])) el[trans] = a[i];
 		else if (i == 'style') el.style.cssText = a[i];
 		else if (i.match(/^on/)) el[i] = new Function(a[i]);
 		else el.setAttribute(i, a[i]);
@@ -41,7 +41,7 @@ DomBuilder = {
 			"script|link|style|bdo|ins|del|object|param|col|colgroup|optgroup|caption|" +
 			"label|dfn|kbd|samp|var").split("|");
 		var el, i=0;
-		while (el = els[i++]) o[el.toUpperCase()] = DomBuilder.tagFunc(el);
+		while ((el = els[i++])) o[el.toUpperCase()] = DomBuilder.tagFunc(el);
 		return o;
 	},
 	tagFunc : function(tag) {
