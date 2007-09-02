@@ -980,5 +980,6 @@ function parse(s, f, l) {
 	return n;
 }
 
+Crunchy.tokenstr = tokenstr;
 Crunchy.parse = parse;
 })();
