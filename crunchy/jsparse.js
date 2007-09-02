@@ -921,7 +921,7 @@ function Expression(t, x, stop) {
 	var tt, operators = [], operands = [];
 	var state = { bl : x.bracketLevel, cl : x.curlyLevel, pl : x.parenLevel, hl : x.hookLevel, scanOperand : true };
 
-	while ((tt = state.scanOperand ? t.getOperand() : t.getOperator()) != "END") {
+	while ((tt = t.getToken(state.scanOperand)) != "END") {
 		if (tt == stop &&
 			x.bracketLevel == state.bl && x.curlyLevel == state.cl && x.parenLevel == state.pl &&
 			x.hookLevel == state.hl) {

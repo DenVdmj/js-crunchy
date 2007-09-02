@@ -63,11 +63,11 @@ Crunchy.Tokenizer.prototype = {
 	// at its argument.
 
 	matchOperand: function (tt) {
-		return this._get(true) == tt || this.unget();
+		return this.getToken(true) == tt || this.unget();
 	},
 
 	matchOperator: function (tt) {
-		return this._get(false) == tt || this.unget();
+		return this.getToken(false) == tt || this.unget();
 	},
 
 	mustMatchOperand : function(tt) {
@@ -95,7 +95,7 @@ Crunchy.Tokenizer.prototype = {
 		if (this._lookahead) {
 			tt = this._tokens[(this._tokenIndex + this._lookahead) & 3].type;
 		} else {
-			tt = this._get(scanOperand);
+			tt = this.getToken(scanOperand);
 			this.unget();
 		}
 		return tt;
@@ -244,14 +244,14 @@ Crunchy.Tokenizer.prototype = {
 	},
 
 	getOperand : function() {
-		return this._get(true);
+		return this.getToken(true);
 	},
 
 	getOperator : function() {
-		return this._get(false);
+		return this.getToken(false);
 	},
 
-	_get : function(scanOperand) {
+	getToken : function(scanOperand) {
 		while (this._lookahead) {
 			--this._lookahead;
 			this._tokenIndex = (this._tokenIndex + 1) & 3;
