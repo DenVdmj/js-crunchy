@@ -285,7 +285,7 @@ Crunchy.Writer.prototype = {
 		case "DEBUG_SEMICOLON":
 			break;
 		default:
-			Crunchy.error("Unrecognized statement node type: " + tokenstr(s.type));
+			Crunchy.error("Unrecognized statement node type: " + Crunchy.tokenstr(s.type));
 		}
 	},
 
@@ -481,7 +481,7 @@ Crunchy.Writer.prototype = {
 				this.write(')');
 			break;
 		default:
-			Crunchy.error("Unrecognized expression node type: " + tokenstr(e.type));
+			Crunchy.error("Unrecognized expression node type: " + Crunchy.tokenstr(e.type));
 		}
 	},
 
