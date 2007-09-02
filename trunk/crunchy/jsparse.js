@@ -242,36 +242,43 @@ Crunchy.STATEMENT_FORM = 2;
 function Statement(t, x) {
 	// TODO: Here we might have previously called 'peekOperator', and
 	// auto-inserted a semi-colon.
-	var i, label, nodes, n, n2, ss, tt = t.getOperand();
+	var tt = t.getOperand();
+	return (StatementMethods[tt] || StatementMethods['default'])(t, x, tt);
+}
 
-	switch (tt) {
-	  case "FUNCTION":
+var StatementMethods = {
+	"FUNCTION" : function(t, x) {
 		return [FunctionDefinition(t, x, true,
 				x.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
 
-	  case "LEFT_CURLY":
+	},
+
+	"LEFT_CURLY" : function(t, x) {
 		++x.nestedLevel;
 		var children = Statements(t, x);
 		--x.nestedLevel;
 		t.mustMatchOperator("RIGHT_CURLY");
 		if(x.nestedLevel == 0) {
-			n = new Node(t, "BLOCK");
+			var n = new Node(t, "BLOCK");
 			n.children = children;
 			return [n];
 		}
 		else {
 			return children;
 		}
+	},
 
-	  case "IF":
-		n = new Node(t, "IF");
+	"IF" : function(t, x) {
+		var n = new Node(t, "IF");
 		n.setCondition(ParenExpression(t, x));
 		n.setThenPart(OptionalBlock(t, x));
 		n.setElsePart(t.matchOperator("ELSE") ? OptionalBlock(t, x) : null);
 		return [n];
+	},
 
-	  case "SWITCH":
-		n = new Node(t);
+	"SWITCH" : function(t, x) {
+		var tt;
+		var n = new Node(t);
 
 		t.mustMatchOperator("LEFT_PAREN");
 		n.setDiscriminant(Expression(t, x));
@@ -281,7 +288,7 @@ function Statement(t, x) {
 		t.mustMatchOperand("LEFT_CURLY");
 		++x.nestedLevel;
 		while ((tt = t.getOperand()) != "RIGHT_CURLY") {			
-			n2 = new Node(t);
+			var n2 = new Node(t);
 			if(tt == "CASE") {
 				n2.setCaseLabel(Expression(t, x, "COLON"));
 			}
@@ -300,10 +307,14 @@ function Statement(t, x) {
 
 		return [n];
 
-	  case "FOR":
-		n = new Node(t, "");
+	},
+
+	"FOR" : function(t, x) {
+		var n = new Node(t, "");
 		n.isLoop = true;
 		t.mustMatchOperator("LEFT_PAREN");
+
+		var tt, n2;
 		if ((tt = t.peekOperand()) != "SEMICOLON") {
 			x.inForLoopInit = true;
 			if (tt == "VAR" || tt == "CONST") {
@@ -314,6 +325,7 @@ function Statement(t, x) {
 			}
 			x.inForLoopInit = false;
 		}
+
 		// TODO: I'm not sure about this...
 		// Really it shouldn't matter if I say Operator or Operand
 		// but operator seems to be appropriate here - even though it
@@ -338,16 +350,19 @@ function Statement(t, x) {
 		t.mustMatchOperator("RIGHT_PAREN");
 		n.setBody(OptionalBlock(t, x));
 		return [n];
+	},
 
-	  case "WHILE":
-		n = new Node(t);
+	"WHILE" : function(t, x) {
+		var n = new Node(t);
 		n.isLoop = true;
 		n.setCondition(ParenExpression(t, x));
 		n.setBody(OptionalBlock(t, x));
 		return [n];
 
-	  case "DO":
-		n = new Node(t);
+	},
+
+	"DO" : function(t, x) {
+		var n = new Node(t);
 		n.isLoop = true;
 		// TODO: I forget if the block really is optional.
 		n.setBody(OptionalBlock(t, x));
@@ -361,22 +376,35 @@ function Statement(t, x) {
 		else t.matchOperand("SEMICOLON");
 		return [n];
 
-	  case "BREAK":
-	  case "CONTINUE":
-		n = new Node(t);
+	},
+
+	"BREAK" : function(t, x) {
+		// TODO: Duplicat of CONTINUE....
+		var n = new Node(t);
 		if (t.peekOnSameLine() == "IDENTIFIER") {
 			t.getOperand();
 			n.label = t.token().value;
 		}
 		StatementEnd(t,x);
 		return [n];
+	},
 
-	  case "TRY":
-		n = new Node(t);
+	"CONTINUE" : function(t, x) {
+		var n = new Node(t);
+		if (t.peekOnSameLine() == "IDENTIFIER") {
+			t.getOperand();
+			n.label = t.token().value;
+		}
+		StatementEnd(t,x);
+		return [n];
+	},
+
+	"TRY" : function(t, x) {
+		var n = new Node(t);
 		n.setTryBlock(Block(t, x));
 		var catchClauses = [];
 		while (t.matchOperand("CATCH")) {
-			n2 = new Node(t);
+			var n2 = new Node(t);
 			t.mustMatchOperator("LEFT_PAREN");
 			n2.varName = t.mustMatchOperand("IDENTIFIER").value;
 			if (t.matchOperand("IF")) {
@@ -399,73 +427,95 @@ function Statement(t, x) {
 			throw t.newSyntaxError("Invalid try statement");
 		return [n];
 
-	  case "CATCH":
-	  case "FINALLY":
-		throw t.newSyntaxError(Crunchy.tokens[tt] + " without preceding try");
+	},
 
-	  case "THROW":
-		n = new Node(t);
+	"CATCH" : function(t, x, tt) {
+		// TODO: Duplicate of FINALLY
+		throw t.newSyntaxError(Crunchy.tokens[tt] + " without preceding try");
+	},
+	
+	"FINALLY" : function(t, x, tt) {
+		throw t.newSyntaxError(Crunchy.tokens[tt] + " without preceding try");
+	},
+
+	"THROW" : function(t, x) {
+		var n = new Node(t);
 		n.setException(Expression(t, x));
 		StatementEnd(t,x);
 		return [n];
+	},
 
-	  case "RETURN":
+	"RETURN" : function(t, x) {
 		if (!x.inFunction)
 			throw t.newSyntaxError("Invalid return");
-		n = new Node(t);
-		tt = t.peekOnSameLine();
+		var n = new Node(t);
+		var tt = t.peekOnSameLine();
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			n.setReturnValue(Expression(t, x));
 		StatementEnd(t,x);
 		return [n];
+	},
 
-	  case "WITH":
-		n = new Node(t);
+	"WITH" : function(t, x) {
+		var n = new Node(t);
 		n.setObject(ParenExpression(t, x));
 		// TODO: I forget if with statement requires curlies.
 		n.setBody(OptionalBlock(t, x));
 		return [n];
 
-	  case "VAR":
-	  case "CONST":
-		n = Variables(t, x);
+	},
+
+	"VAR" : function(t, x) {
+		var n = Variables(t, x);
 		StatementEnd(t,x);
 		return [n];
+	},
 
-	  case "DEBUGGER":
-		n = new Node(t);
+	"CONST" : function(t, x) {
+		var n = Variables(t, x);
 		StatementEnd(t,x);
 		return [n];
+	},
 
-	  case "NEWLINE":
-	  case "SEMICOLON":
+	"DEBUGGER" : function(t, x) {
+		var n = new Node(t);
+		StatementEnd(t,x);
+		return [n];
+	},
+	
+	"NEWLINE" : function(t, x) {
 		return [];
+	},
 
-	  case "DEBUG_SEMICOLON":
+	"SEMICOLON" : function(t, x) {
+		return [];
+	},
+
+	"DEBUG_SEMICOLON" : function(t, x) {
 		var n = new Node(t);
 		n.setStatement(Statement(t, x));
 		return [n];
+	},
 
-	  default:
+	"default": function(t, x, tt) {
 		if (tt == "IDENTIFIER" && t.peekOperator() == "COLON")
 		{
-			label = t.token().value;
+			var label = t.token().value;
 			t.getOperand();
-			n = new Node(t, "LABEL");
+			var n = new Node(t, "LABEL");
 			n.label = label;
 			n.setStatement(Statement(t, x));
 			return [n];
 		}
-
-		n = new Node(t, "SEMICOLON");
-		t.unget();
-		n.setExpression(Expression(t, x));
-		n.end = n.expression.end;
-		StatementEnd(t,x);
-		return [n];
+		else {
+			var n = new Node(t, "SEMICOLON");
+			t.unget();
+			n.setExpression(Expression(t, x));
+			n.end = n.expression.end;
+			StatementEnd(t,x);
+			return [n];
+		}
 	}
-
-	throw "Should never reach here.";
 }
 
 function StatementEnd(t, x) {
