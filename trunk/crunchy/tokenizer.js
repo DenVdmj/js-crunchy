@@ -44,7 +44,7 @@ Crunchy.Tokenizer = function(s, f, l) {
 	this.filename = f || "";
 	this.lineno = l || 1;
 	this._cursor = 0;
-	this._tokens = [];
+	this._tokens = [false, false, false, false];
 	this._tokenIndex = 0;
 	this._lookahead = 0;
 	this._scanNewlines = false;
@@ -241,6 +241,7 @@ Crunchy.Tokenizer.prototype = {
 				return self._newToken("NEWLINE", '\n');
 			}
 		}
+		return undefined;
 	},
 
 	getOperand : function() {

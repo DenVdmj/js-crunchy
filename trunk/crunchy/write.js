@@ -57,7 +57,7 @@ Crunchy.Writer.prototype = {
 		this.statementStart = false;
 
 		for(var i = 0; i < arguments.length; ++i) {
-			token = String(arguments[i]);
+			var token = String(arguments[i]);
 
 			if(this.prev) {
 				switch(this.prev) {
@@ -307,7 +307,7 @@ Crunchy.Writer.prototype = {
 					});
 				}
 				// Arrays that end with an EMPTY need a trailing comma.
-				if(es.top().type == "EMPTY") this.write(',');
+				if(es.length && es.top().type == "EMPTY") this.write(',');
 			}
 			else {
 				this.writeExpression(es);

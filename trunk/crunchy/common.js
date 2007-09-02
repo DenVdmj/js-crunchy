@@ -1,4 +1,4 @@
-if(!this.console) console = {}
+if(!this.console) this.console = {}
 if(!console.log) console.log = function() {}
 if(!console.error) console.error = function() {}
 
@@ -75,6 +75,7 @@ new function() {
 				--src.length;
 				return tmp;
 			}
+			else return undefined;
 		},
 		push : function(src) {
 			for (var i=1; i!=arguments.length; ++i)

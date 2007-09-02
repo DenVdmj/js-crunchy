@@ -17,7 +17,7 @@
 				null;
 		},
 		contains : function(x) { return !!this.hash[this.genIndex(x)]; },
-		get : function(x) { return this.hash[this.genIndex(x)]; },
+		get : function(x) { return this.hash[this.genIndex(x)] ? this.hash[this.genIndex(x)] : false; },
 		set : function(x, y) { return this.hash[this.genIndex(x)] = y; },
 		insert : function(x,y) {
 			var i = this.genIndex(x);

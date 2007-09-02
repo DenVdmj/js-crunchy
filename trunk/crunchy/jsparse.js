@@ -306,7 +306,6 @@ var StatementMethods = {
 		n.setCases(cases);
 
 		return [n];
-
 	},
 
 	"FOR" : function(t, x) {
@@ -796,7 +795,7 @@ var OperatorMethods = {
 
 function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
+	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 		ReduceExpression(t, operators, operands);
 
 	operators.push(new OperatorNode(t));
@@ -811,7 +810,7 @@ function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
 
 function ExpressionColon(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
+	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
 		operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN")
 		ReduceExpression(t, operators, operands);
 
@@ -833,7 +832,7 @@ function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 		!x.bracketLevel && !x.curlyLevel && !x.parenLevel))
 			return false;
 
-	while (Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
+	while (operators.length && Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
 		ReduceExpression(t, operators, operands);
 	if (tt == "DOT") {
 		var n = new OperatorNode(t, "DOT");
@@ -850,7 +849,7 @@ function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 
 function ExpressionPostOperator(t, x, tt, state, operators, operands) {
 	// Use >, not >=, so postfix has higher precedence than prefix.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
+	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 		ReduceExpression(t, operators, operands);
 	var n = new OperatorNode(t, tt);
 	n.pushOperand(operands.pop());
@@ -876,7 +875,7 @@ function ExpressionRightBracket(t, x, tt, state, operators, operands) {
 }
 
 function ExpressionCall(t, x, tt, state, operators, operands) {
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
+	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
 		ReduceExpression(t, operators, operands);
 
 	// Handle () now, to regularize the n-ary case for n > 0.
@@ -885,7 +884,7 @@ function ExpressionCall(t, x, tt, state, operators, operands) {
 	var n = operators.top();
 	state.scanOperand = true;
 	if (t.matchOperand("RIGHT_PAREN")) {
-		if (n.type == "NEW") {
+		if (n && n.type == "NEW") {
 			--operators.length;
 			n.pushOperand(operands.pop());
 		} else {
@@ -897,7 +896,7 @@ function ExpressionCall(t, x, tt, state, operators, operands) {
 		state.scanOperand = false;
 		return true;
 	}
-	if (n.type == "NEW")
+	if (n && n.type == "NEW")
 		n.type = "NEW_WITH_ARGS";
 	else
 		operators.push(new OperatorNode(t, "CALL"));
