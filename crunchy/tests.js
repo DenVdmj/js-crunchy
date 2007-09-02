@@ -198,6 +198,7 @@ runTest("var x=[0];(function() { return x;})()[0] = 1", "test(x[0] == 1)");
 
 runTest("var x=[0,1,2][1]", "test(x == 1)");
 runTest("var x=[[0,1],[2,3],[4,5]][1][0]", "test(x == 2)");
+runTest("var x=[[0,1],[2,3],[4,5]][1+1][1-1]", "test(x == 4)");
 
 /**/
 print("Finished!");
