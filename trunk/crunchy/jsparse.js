@@ -244,8 +244,6 @@ function Statement(t, x) {
 	// auto-inserted a semi-colon.
 	var i, label, nodes, n, n2, ss, tt = t.getOperand();
 
-	// Cases for statements ending in a right curly return early, avoiding the
-	// common semicolon insertion magic after this switch.
 	switch (tt) {
 	  case "FUNCTION":
 		return [FunctionDefinition(t, x, true,
