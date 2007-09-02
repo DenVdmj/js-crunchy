@@ -355,14 +355,13 @@ function Statement(t, x) {
 		n.setBody(OptionalBlock(t, x));
 		t.mustMatchOperand("WHILE");
 		n.setCondition(ParenExpression(t, x));
-		if (!x.ecmaStrictMode) {
-			// <script language="JavaScript"> (without version hints) may need
-			// automatic semicolon insertion without a newline after do-while.
-			// See http://bugzilla.mozilla.org/show_bug.cgi?id=238945.
-			t.matchOperand("SEMICOLON");
-			return [n];
-		}
-		break;
+
+		// Several javascript implementations allow automatic semicolon
+		// insertion without a newline after do-while.
+		// See http://bugzilla.mozilla.org/show_bug.cgi?id=238945.
+		if (x.ecmaStrictMode) StatementEnd(t,x); 
+		else t.matchOperand("SEMICOLON");
+		return [n];
 
 	  case "BREAK":
 	  case "CONTINUE":
@@ -371,7 +370,8 @@ function Statement(t, x) {
 			t.getOperand();
 			n.label = t.token().value;
 		}
-		break;
+		StatementEnd(t,x);
+		return [n];
 
 	  case "TRY":
 		n = new Node(t);
@@ -408,7 +408,8 @@ function Statement(t, x) {
 	  case "THROW":
 		n = new Node(t);
 		n.setException(Expression(t, x));
-		break;
+		StatementEnd(t,x);
+		return [n];
 
 	  case "RETURN":
 		if (!x.inFunction)
@@ -417,7 +418,8 @@ function Statement(t, x) {
 		tt = t.peekOnSameLine();
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			n.setReturnValue(Expression(t, x));
-		break;
+		StatementEnd(t,x);
+		return [n];
 
 	  case "WITH":
 		n = new Node(t);
@@ -429,11 +431,13 @@ function Statement(t, x) {
 	  case "VAR":
 	  case "CONST":
 		n = Variables(t, x);
-		break;
+		StatementEnd(t,x);
+		return [n];
 
 	  case "DEBUGGER":
 		n = new Node(t);
-		break;
+		StatementEnd(t,x);
+		return [n];
 
 	  case "NEWLINE":
 	  case "SEMICOLON":
@@ -459,16 +463,20 @@ function Statement(t, x) {
 		t.unget();
 		n.setExpression(Expression(t, x));
 		n.end = n.expression.end;
-		break;
+		StatementEnd(t,x);
+		return [n];
 	}
 
+	throw "Should never reach here.";
+}
+
+function StatementEnd(t, x) {
 	if (t.lineno == t.token().lineno) {
 		tt = t.peekOnSameLine();
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			throw t.newSyntaxError("Missing ; before statement");
 	}
 	t.matchOperand("SEMICOLON");
-	return [n];
 }
 
 function FunctionDefinition(t, x, requireName, functionForm) {
