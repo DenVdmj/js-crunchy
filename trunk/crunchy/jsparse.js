@@ -658,136 +658,9 @@ var OperandMethods = {
 	"LEFT_PAREN": ExpressionGroup
 }
 
-var OperatorMethods = {
-	"ASSIGN": OperatorAssignHookColon,
-	"HOOK": OperatorAssignHookColon,
-	"COLON": OperatorAssignHookColon,
-	"IN": BinaryOperator,
-	// Treat comma as left-associative so reduce can fold left-heavy
-	// COMMA trees into a single array.
-	// FALL THROUGH
-	"COMMA": BinaryOperator,
-	"OR": BinaryOperator,
-	"AND": BinaryOperator,
-	"BITWISE_OR": BinaryOperator,
-	"BITWISE_XOR": BinaryOperator,
-	"BITWISE_AND": BinaryOperator,
-	"EQ": BinaryOperator,
-	"NE": BinaryOperator,
-	"STRICT_EQ": BinaryOperator,
-	"STRICT_NE": BinaryOperator,
-	"LT": BinaryOperator,
-	"LE": BinaryOperator,
-	"GE": BinaryOperator,
-	"GT": BinaryOperator,
-	"INSTANCEOF": BinaryOperator,
-	"LSH": BinaryOperator,
-	"RSH": BinaryOperator,
-	"URSH": BinaryOperator,
-	"PLUS": BinaryOperator,
-	"MINUS": BinaryOperator,
-	"MUL": BinaryOperator,
-	"DIV": BinaryOperator,
-	"MOD": BinaryOperator,
-	"DOT": BinaryOperator,
-	"INCREMENT": PostOperators,
-	"DECREMENT": PostOperators,
-	"LEFT_BRACKET": ExpressionIndex,
-	"RIGHT_BRACKET": ExpressionRightBracket,
-	"LEFT_PAREN": ExpressionCall,
-	"RIGHT_PAREN": ExpressionRightParen
-}
-
-function ReduceExpression(t, operators, operands) {
-	var n = operators.pop();
-	var op = n.type;
-	var arity = Crunchy.opArity[op];
-	if (arity == -2) {
-		// Flatten left-associative trees.
-		var left = operands.length >= 2 && operands[operands.length-2];
-		if (left.type == op) {
-			var right = operands.pop();
-			left.pushOperand(right);
-			return left;
-		}
-		arity = 2;
-	}
-
-	// Always use push to add operands to n, to update start and end.
-	// Workaround: Konqueror requires two arguments to splice (or maybe the
-	// one argument form is a seamonkey extension?)
-	var a = operands.splice(operands.length - arity, arity);
-	for (var i = 0; i < arity; i++)
-		n.pushOperand(a[i]);
-
-	// Include closing bracket or postfix operator in [start,end).
-	if (n.end < t.token().end)
-		n.end = t.token().end;
-
-	operands.push(n);
-	return n;
-}
-
-function OperatorAssignHookColon(t, x, tt, state, operators, operands) {
-	// Use >, not >=, for right-associative ASSIGN and HOOK/COLON.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
-	   (tt == "COLON" && (operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))) {
-		ReduceExpression(t, operators, operands);
-	}
-	if (tt == "COLON") {
-		var n = operators.top();
-		if (n.type != "HOOK")
-			throw t.newSyntaxError("Invalid label");
-		n.type = "CONDITIONAL";
-		--x.hookLevel;
-	} else {
-		operators.push(new OperatorNode(t));
-		if (tt == "ASSIGN")
-			operands.top().assignOp = t.token().assignOp;
-		else
-			++x.hookLevel;		// tt == HOOK
-	}
-	state.scanOperand = true;
-	return true;
-}
-
-function BinaryOperator(t, x, tt, state, operators, operands) {
-	// An in operator should not be parsed if we're parsing the head of
-	// a for (...) loop, unless it is in the then part of a conditional
-	// expression, or parenthesized somehow.
-	if(tt == "IN" && (x.inForLoopInit && !x.hookLevel &&
-		!x.bracketLevel && !x.curlyLevel && !x.parenLevel))
-			return false;
-
-	while (Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
-		ReduceExpression(t, operators, operands);
-	if (tt == "DOT") {
-		var n = new OperatorNode(t, "DOT");
-		n.pushOperand(operands.pop());
-		t.mustMatchOperand("IDENTIFIER");
-		n.pushOperand(new Node(t, "MEMBER_IDENTIFIER"));
-		operands.push(n);
-	} else {
-		operators.push(new OperatorNode(t));
-		state.scanOperand = true;
-	}
-	return true;
-}
-
 function UnaryOperator(t, x, tt, state, operators, operands) {
 	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
 	operators.push(new OperatorNode(t, tt));
-	return true;
-}
-
-function PostOperators(t, x, tt, state, operators, operands) {
-	// Use >, not >=, so postfix has higher precedence than prefix.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
-		ReduceExpression(t, operators, operands);
-	var n = new OperatorNode(t, tt);
-	n.pushOperand(operands.pop());
-	n.postfix = true;
-	operands.push(n);
 	return true;
 }
 
@@ -820,22 +693,6 @@ function ExpressionArrayInit(t, x, tt, state, operators, operands) {
 	t.mustMatchOperator("RIGHT_BRACKET");
 	operands.push(n);
 	state.scanOperand = false;
-	return true;
-}
-
-function ExpressionIndex(t, x, tt, state, operators, operands) {
-	// Property indexing operator.
-	operators.push(new OperatorNode(t, "INDEX"));
-	state.scanOperand = true;
-	++x.bracketLevel;
-	return true;
-}
-
-function ExpressionRightBracket(t, x, tt, state, operators, operands) {
-	if (x.bracketLevel == state.bl) return false;
-	while (ReduceExpression(t, operators, operands).type != "INDEX")
-		continue;
-	--x.bracketLevel;
 	return true;
 }
 
@@ -895,6 +752,119 @@ function ExpressionGroup(t, x, tt, state, operators, operands) {
 	return true;
 }
 
+var OperatorMethods = {
+	"ASSIGN": OperatorAssignHookColon,
+	"HOOK": OperatorAssignHookColon,
+	"COLON": OperatorAssignHookColon,
+	"IN": BinaryOperator,
+	// Treat comma as left-associative so reduce can fold left-heavy
+	// COMMA trees into a single array.
+	// FALL THROUGH
+	"COMMA": BinaryOperator,
+	"OR": BinaryOperator,
+	"AND": BinaryOperator,
+	"BITWISE_OR": BinaryOperator,
+	"BITWISE_XOR": BinaryOperator,
+	"BITWISE_AND": BinaryOperator,
+	"EQ": BinaryOperator,
+	"NE": BinaryOperator,
+	"STRICT_EQ": BinaryOperator,
+	"STRICT_NE": BinaryOperator,
+	"LT": BinaryOperator,
+	"LE": BinaryOperator,
+	"GE": BinaryOperator,
+	"GT": BinaryOperator,
+	"INSTANCEOF": BinaryOperator,
+	"LSH": BinaryOperator,
+	"RSH": BinaryOperator,
+	"URSH": BinaryOperator,
+	"PLUS": BinaryOperator,
+	"MINUS": BinaryOperator,
+	"MUL": BinaryOperator,
+	"DIV": BinaryOperator,
+	"MOD": BinaryOperator,
+	"DOT": BinaryOperator,
+	"INCREMENT": PostOperators,
+	"DECREMENT": PostOperators,
+	"LEFT_BRACKET": ExpressionIndex,
+	"RIGHT_BRACKET": ExpressionRightBracket,
+	"LEFT_PAREN": ExpressionCall,
+	"RIGHT_PAREN": ExpressionRightParen
+}
+
+function OperatorAssignHookColon(t, x, tt, state, operators, operands) {
+	// Use >, not >=, for right-associative ASSIGN and HOOK/COLON.
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
+	   (tt == "COLON" && (operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))) {
+		ReduceExpression(t, operators, operands);
+	}
+	if (tt == "COLON") {
+		var n = operators.top();
+		if (n.type != "HOOK")
+			throw t.newSyntaxError("Invalid label");
+		n.type = "CONDITIONAL";
+		--x.hookLevel;
+	} else {
+		operators.push(new OperatorNode(t));
+		if (tt == "ASSIGN")
+			operands.top().assignOp = t.token().assignOp;
+		else
+			++x.hookLevel;		// tt == HOOK
+	}
+	state.scanOperand = true;
+	return true;
+}
+
+function BinaryOperator(t, x, tt, state, operators, operands) {
+	// An in operator should not be parsed if we're parsing the head of
+	// a for (...) loop, unless it is in the then part of a conditional
+	// expression, or parenthesized somehow.
+	if(tt == "IN" && (x.inForLoopInit && !x.hookLevel &&
+		!x.bracketLevel && !x.curlyLevel && !x.parenLevel))
+			return false;
+
+	while (Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
+		ReduceExpression(t, operators, operands);
+	if (tt == "DOT") {
+		var n = new OperatorNode(t, "DOT");
+		n.pushOperand(operands.pop());
+		t.mustMatchOperand("IDENTIFIER");
+		n.pushOperand(new Node(t, "MEMBER_IDENTIFIER"));
+		operands.push(n);
+	} else {
+		operators.push(new OperatorNode(t));
+		state.scanOperand = true;
+	}
+	return true;
+}
+
+function PostOperators(t, x, tt, state, operators, operands) {
+	// Use >, not >=, so postfix has higher precedence than prefix.
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
+		ReduceExpression(t, operators, operands);
+	var n = new OperatorNode(t, tt);
+	n.pushOperand(operands.pop());
+	n.postfix = true;
+	operands.push(n);
+	return true;
+}
+
+function ExpressionIndex(t, x, tt, state, operators, operands) {
+	// Property indexing operator.
+	operators.push(new OperatorNode(t, "INDEX"));
+	state.scanOperand = true;
+	++x.bracketLevel;
+	return true;
+}
+
+function ExpressionRightBracket(t, x, tt, state, operators, operands) {
+	if (x.bracketLevel == state.bl) return false;
+	while (ReduceExpression(t, operators, operands).type != "INDEX")
+		continue;
+	--x.bracketLevel;
+	return true;
+}
+
 function ExpressionCall(t, x, tt, state, operators, operands) {
 	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
 		ReduceExpression(t, operators, operands);
@@ -949,6 +919,36 @@ function ExpressionRightParen(t, x, tt, state, operators, operands) {
 	}
 	--x.parenLevel;
 	return true;
+}
+
+function ReduceExpression(t, operators, operands) {
+	var n = operators.pop();
+	var op = n.type;
+	var arity = Crunchy.opArity[op];
+	if (arity == -2) {
+		// Flatten left-associative trees.
+		var left = operands.length >= 2 && operands[operands.length-2];
+		if (left.type == op) {
+			var right = operands.pop();
+			left.pushOperand(right);
+			return left;
+		}
+		arity = 2;
+	}
+
+	// Always use push to add operands to n, to update start and end.
+	// Workaround: Konqueror requires two arguments to splice (or maybe the
+	// one argument form is a seamonkey extension?)
+	var a = operands.splice(operands.length - arity, arity);
+	for (var i = 0; i < arity; i++)
+		n.pushOperand(a[i]);
+
+	// Include closing bracket or postfix operator in [start,end).
+	if (n.end < t.token().end)
+		n.end = t.token().end;
+
+	operands.push(n);
+	return n;
 }
 
 function parse(s, f, l) {
