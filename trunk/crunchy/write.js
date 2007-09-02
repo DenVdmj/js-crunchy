@@ -365,20 +365,25 @@ Crunchy.Writer.prototype = {
 			// Nothing binds closer, so brackets aren't required here.
 			// I suppose if DOT could use expressions for the member
 			// eg. x.(y()). But it doesn't, that's meaningless.
-			if(e.type == "NEW_WITH_ARGS") this.write('new');
+			if(e.type == "NEW_WITH_ARGS")
+				for(var i = 1; i < e.children.length; ++i) this.write('new');
+
 			this.writeExpression(e.children[0], Crunchy.opPrecedence["DOT"]);
-			if(e.children[1].type != "LIST") {
-				Crunchy.error("Suprise operand type for CALL.");
-				this.writeBracketed([], '(', ')');
-			}
-			else {
-				this.writeBracketed(e.children[1].children, '(', ')');
+			for(var i = 1; i < e.children.length; ++i) {
+				if(e.children[i].type != "LIST") {
+					Crunchy.error("Suprise operand type for CALL.");
+					this.writeBracketed([], '(', ')');
+				}
+				else {
+					this.writeBracketed(e.children[i].children, '(', ')');
+				}
 			}
 			break;
 		case "INDEX":
 			// INDEX binds as for CALL
 			this.writeExpression(e.children[0], Crunchy.opPrecedence["DOT"]);
-			this.writeBracketed(e.children[1], '[', ']');
+			for(var i = 1; i < e.children.length; ++i)
+				this.writeBracketed(e.children[i], '[', ']');
 			break;
 		case "OBJECT_INIT":
 			this.writeBracketed(e.children, '{', '}');
@@ -410,8 +415,10 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type] + 1);
-			this.write(op);
-			this.writeExpression(e.children[1], Crunchy.opPrecedence[e.type]);
+			for(var i = 1; i < e.children.length; ++i) {
+				this.write(op);
+				this.writeExpression(e.children[1], Crunchy.opPrecedence[e.type]);
+			}
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;

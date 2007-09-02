@@ -58,9 +58,21 @@
 	// Concatenate strings.
 
 	addTransformation(postTransformations, ["PLUS"], function(plus) {
-		if(plus.children[0].type == "STRING" && plus.children[1].type == "STRING") {
+		var i = 0;
+		while(i < plus.children.length - 1) {
+			// TODO: Convert values to string?
+			if(plus.children[i].type == "STRING" && plus.children[i+1].type == "STRING") {
+				plus.children[i].value = plus.children[i].value + plus.children[i+1].value;
+				plus.children.splice(i+1, 1);
+			}
+			else {
+				++i;
+			}
+		}
+		if(plus.children.length == 1) {
+			// TODO: Replace plus with plus.children[0].
 			plus.type = "STRING";
-			plus.value = plus.children[0].value + plus.children[1].value;
+			plus.value = plus.children[0].value;
 		}
 	});
 
