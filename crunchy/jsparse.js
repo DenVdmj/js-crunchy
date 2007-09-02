@@ -602,19 +602,21 @@ function Expression(t, x, stop) {
 	var tt, operators = [], operands = [];
 	var state = { bl : x.bracketLevel, cl : x.curlyLevel, pl : x.parenLevel, hl : x.hookLevel, scanOperand : true };
 
-	while ((tt = t.getToken(state.scanOperand)) != "END") {
+	do {
+		// NOTE: If tt == END, a method won't be found and the loop will exit
+		// normally.
+		tt = t.getToken(state.scanOperand);
+
+		// Stop if tt matches the optional stop parameter, and that
+		// token is not quoted by some kind of bracket.
 		if (tt == stop &&
 			x.bracketLevel == state.bl && x.curlyLevel == state.cl && x.parenLevel == state.pl &&
 			x.hookLevel == state.hl) {
-			// Stop only if tt matches the optional stop parameter, and that
-			// token is not quoted by some kind of bracket.
 			break;
 		}
 
 		var f = (state.scanOperand ? OperandMethods : OperatorMethods)[tt];
-		if(!f) break;
-		if(!f(t, x, tt, state, operators, operands)) break;
-	}
+	} while(f && f(t, x, tt, state, operators, operands));
 
 	if (x.hookLevel != state.hl)
 		throw t.newSyntaxError("Missing : after ?");
@@ -753,9 +755,9 @@ function ExpressionGroup(t, x, tt, state, operators, operands) {
 }
 
 var OperatorMethods = {
-	"ASSIGN": ExpressionAssignHookColon,
-	"HOOK": ExpressionAssignHookColon,
-	"COLON": ExpressionAssignHookColon,
+	"ASSIGN": ExpressionRightAssociative,
+	"HOOK": ExpressionRightAssociative,
+	"COLON": ExpressionColon,
 	"IN": ExpressionBinaryOperator,
 	// Treat comma as left-associative so reduce can fold left-heavy
 	// COMMA trees into a single array.
@@ -792,25 +794,33 @@ var OperatorMethods = {
 	"RIGHT_PAREN": ExpressionRightParen
 }
 
-function ExpressionAssignHookColon(t, x, tt, state, operators, operands) {
-	// Use >, not >=, for right-associative ASSIGN and HOOK/COLON.
-	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
-	   (tt == "COLON" && (operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))) {
+function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
+	// Use >, not >=, for right-associative operators.
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 		ReduceExpression(t, operators, operands);
-	}
-	if (tt == "COLON") {
-		var n = operators.top();
-		if (n.type != "HOOK")
-			throw t.newSyntaxError("Invalid label");
-		n.type = "CONDITIONAL";
-		--x.hookLevel;
-	} else {
-		operators.push(new OperatorNode(t));
-		if (tt == "ASSIGN")
-			operands.top().assignOp = t.token().assignOp;
-		else
-			++x.hookLevel;		// tt == HOOK
-	}
+
+	operators.push(new OperatorNode(t));
+	if (tt == "ASSIGN")
+		operands.top().assignOp = t.token().assignOp;
+	else
+		++x.hookLevel;		// tt == HOOK
+
+	state.scanOperand = true;
+	return true;
+}
+
+function ExpressionColon(t, x, tt, state, operators, operands) {
+	// Use >, not >=, for right-associative operators.
+	while (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
+		operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN")
+		ReduceExpression(t, operators, operands);
+
+	var n = operators.top();
+	if (n.type != "HOOK")
+		throw t.newSyntaxError("Invalid label");
+	n.type = "CONDITIONAL";
+	--x.hookLevel;
+
 	state.scanOperand = true;
 	return true;
 }
@@ -904,12 +914,13 @@ function ExpressionRightParen(t, x, tt, state, operators, operands) {
 	}
 	if (tt != "GROUP") {
 		var n = operands.top();
-		var n2 = n.children[1];
+		var last = n.children.length - 1;
+		var n2 = n.children[last];
 		if (n2.type != "COMMA") {
-			n.children[1] = new OperatorNode(t, "LIST");
-			n.children[1].pushOperand(n2);
+			n.children[last] = new OperatorNode(t, "LIST");
+			n.children[last].pushOperand(n2);
 		} else
-			n.children[1].type = "LIST";
+			n.children[last].type = "LIST";
 	}
 	else {
 		var n = operands.top();
@@ -925,6 +936,8 @@ function ReduceExpression(t, operators, operands) {
 	var n = operators.pop();
 	var op = n.type;
 	var arity = Crunchy.opArity[op];
+	var origArity = arity;
+
 	if (arity == -2) {
 		// Flatten left-associative trees.
 		var left = operands.length >= 2 && operands[operands.length-2];
@@ -940,8 +953,16 @@ function ReduceExpression(t, operators, operands) {
 	// Workaround: Konqueror requires two arguments to splice (or maybe the
 	// one argument form is a seamonkey extension?)
 	var a = operands.splice(operands.length - arity, arity);
-	for (var i = 0; i < arity; i++)
-		n.pushOperand(a[i]);
+
+	// Flatten right-associative trees.
+	if(origArity == 2 && a[0].type == op) {
+		n = a[0];
+		n.pushOperand(a[1]);
+	}
+	else {
+		for (var i = 0; i < arity; i++)
+			n.pushOperand(a[i]);
+	}
 
 	// Include closing bracket or postfix operator in [start,end).
 	if (n.end < t.token().end)
