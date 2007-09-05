@@ -220,13 +220,13 @@ Np.filename = function () { return this.tokenizer.filename; };
 
 function Statements(t, x) {
 	var tt,nodes = [];
-	while ((tt = t.peekOperand()) != "END" && tt != "RIGHT_CURLY")
+	while ((tt = t.peekOperand().type) != "END" && tt != "RIGHT_CURLY")
 		nodes = nodes.concat(Statement(t, x));
 	return nodes;
 }
 
 function Block(t, x) {
-	if(t.peekOperand() != "LEFT_CURLY")
+	if(t.peekOperand().type != "LEFT_CURLY")
 		throw t.newSyntaxError("Code block expected.");
 	return OptionalBlock(t, x);
 }
@@ -300,7 +300,7 @@ var StatementMethods = {
 			}
 			t.mustMatchOperand("COLON");
 			var statements = [];
-			while ((tt=t.peekOperand()) != "CASE" && tt != "DEFAULT" && tt != "RIGHT_CURLY")
+			while ((tt=t.peekOperand().type) != "CASE" && tt != "DEFAULT" && tt != "RIGHT_CURLY")
 				statements = statements.concat(Statement(t, x));
 			n2.setStatements(statements);
 			cases.push(n2);
@@ -317,7 +317,7 @@ var StatementMethods = {
 		t.mustMatchOperator("LEFT_PAREN");
 
 		var tt, n2;
-		if ((tt = t.peekOperand()) != "SEMICOLON") {
+		if ((tt = t.peekOperand().type) != "SEMICOLON") {
 			x.inForLoopInit = true;
 			if (tt == "VAR" || tt == "CONST") {
 				t.getOperand();
@@ -345,9 +345,9 @@ var StatementMethods = {
 			n.setType("FOR");
 			n.setSetup(n2 || null);
 			t.mustMatchOperator("SEMICOLON");
-			n.setCondition((t.peekOperand() == "SEMICOLON") ? null : Expression(t, x));
+			n.setCondition((t.peekOperand().type == "SEMICOLON") ? null : Expression(t, x));
 			t.mustMatchOperator("SEMICOLON");
-			n.setUpdate((t.peekOperand() == "RIGHT_PAREN") ? null : Expression(t, x));
+			n.setUpdate((t.peekOperand().type == "RIGHT_PAREN") ? null : Expression(t, x));
 		}
 		t.mustMatchOperator("RIGHT_PAREN");
 		n.setBody(OptionalBlock(t, x));
@@ -383,7 +383,7 @@ var StatementMethods = {
 	"BREAK" : function(t, x) {
 		// TODO: Duplicat of CONTINUE....
 		var n = new Node(t);
-		if (t.peekOnSameLine() == "IDENTIFIER") {
+		if (t.peekOnSameLine().isProperty) {
 			t.getOperand();
 			n.label = t.token().value;
 		}
@@ -393,7 +393,7 @@ var StatementMethods = {
 
 	"CONTINUE" : function(t, x) {
 		var n = new Node(t);
-		if (t.peekOnSameLine() == "IDENTIFIER") {
+		if (t.peekOnSameLine().isProperty) {
 			t.getOperand();
 			n.label = t.token().value;
 		}
@@ -408,6 +408,7 @@ var StatementMethods = {
 		while (t.matchOperand("CATCH")) {
 			var n2 = new Node(t);
 			t.mustMatchOperator("LEFT_PAREN");
+			// TODO: isProperty
 			n2.varName = t.mustMatchOperand("IDENTIFIER").value;
 			if (t.matchOperand("IF")) {
 				if (x.ecmaStrictMode)
@@ -451,7 +452,7 @@ var StatementMethods = {
 		if (!x.inFunction)
 			throw t.newSyntaxError("Invalid return");
 		var n = new Node(t);
-		var tt = t.peekOnSameLine();
+		var tt = t.peekOnSameLine().type;
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			n.setReturnValue(Expression(t, x));
 		StatementEnd(t,x);
@@ -500,7 +501,8 @@ var StatementMethods = {
 	},
 
 	"default": function(t, x, tt) {
-		if (tt == "IDENTIFIER" && t.peekOperator() == "COLON")
+		// TODO: isProperty
+		if (tt == "IDENTIFIER" && t.peekOperator().type == "COLON")
 		{
 			var label = t.token().value;
 			t.getOperand();
@@ -526,9 +528,7 @@ var StatementMethods = {
 		// in a goto statement, the next token is a label - which will be correctly identified by a peek operator call.
 		var tt = t.peekOnSameLine();
 
-		// TODO: Better way of identifying possible labels and variables
-		//       - remember that GOTO (and some others) can be both.
-		if(tt == "IDENTIFIER") {
+		if(tt.isProperty) {
 			// TODO: Duplicate of BREAK/CONTINUE (sort of).
 			var n = new Node(t);
 			t.getOperand();
@@ -549,7 +549,7 @@ var StatementMethods = {
 
 function StatementEnd(t, x) {
 	if (t.lineno == t.token().lineno) {
-		tt = t.peekOnSameLine();
+		tt = t.peekOnSameLine().type;
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			throw t.newSyntaxError("Missing ; before statement");
 	}
@@ -561,6 +561,7 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	// TODO: This doesn't work.
 	if (f.type != "FUNCTION")
 		f.type = (f.value == "get") ? "GETTER" : "SETTER";
+	// TODO: isProperty
 	if (t.matchOperand("IDENTIFIER"))
 		f.name = t.token().value;
 	else if (requireName)
@@ -571,12 +572,13 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	var tt;
 	// TODO: This will match function(x,) {}
 	while ((tt = t.getOperand()) != "RIGHT_PAREN") {
+		// TODO: isProperty
 		if (tt != "IDENTIFIER")
 			throw t.newSyntaxError("Missing formal parameter");
 		params.push(t.token().value);
 		// TODO: Operator/Operand? Either, but operator seems to make more
 		// sence
-		if (t.peekOperator() != "RIGHT_PAREN")
+		if (t.peekOperator().type != "RIGHT_PAREN")
 			t.mustMatchOperator("COMMA");
 	}
 	f.params = params;
@@ -605,6 +607,7 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 function Variables(t, x) {
 	var n = new OperatorNode(t);
 	do {
+		// TODO: isProperty
 		t.mustMatchOperand("IDENTIFIER");
 		var n2 = new Node(t);
 		n2.name = n2.value;
@@ -711,7 +714,7 @@ function ExpressionArrayInit(t, x, tt, state, operators, operands) {
 	// Array initialiser.  Parse using recursive descent, as the
 	// sub-grammar here is not an operator grammar.
 	var n = new OperatorNode(t, "ARRAY_INIT");
-	while ((tt = t.peekOperand()) != "RIGHT_BRACKET") {
+	while ((tt = t.peekOperand().type) != "RIGHT_BRACKET") {
 		if (tt == "COMMA") {
 			t.getOperand();
 			n.pushOperand(new Node(t, "EMPTY"));
@@ -737,11 +740,12 @@ function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
 		do {
 			tt = t.getOperand();
 			if ((t.token().value == "get" || t.token().value == "set") &&
-				t.peekOperand() == "IDENTIFIER") {
+				t.peekOperand().type == "IDENTIFIER") {
 				if (x.ecmaStrictMode)
 					throw t.newSyntaxError("Illegal property accessor");
 				n.pushOperand(FunctionDefinition(t, x, true, Crunchy.EXPRESSED_FORM));
 			} else {
+				// TODO: isProperty (or all keywords?)
 				switch (tt) {
 				  case "IDENTIFIER":
 					var id = new Node(t, "MEMBER_IDENTIFIER");
@@ -867,6 +871,7 @@ function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 	if (tt == "DOT") {
 		var n = new OperatorNode(t, "DOT");
 		n.pushOperand(operands.pop());
+		// TODO: isProperty
 		t.mustMatchOperand("IDENTIFIER");
 		n.pushOperand(new Node(t, "MEMBER_IDENTIFIER"));
 		operands.push(n);
@@ -1004,7 +1009,7 @@ function ReduceExpression(t, operators, operands) {
 function parse(s, f, l) {
 	var t = new Crunchy.Tokenizer(s, f, l);
 	var n = Script(t);
-	if (t.peekOperand() != "END")
+	if (t.peekOperand().type != "END")
 		throw t.newSyntaxError("Syntax error");
 	return n;
 }
