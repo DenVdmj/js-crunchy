@@ -88,7 +88,10 @@ var NodeTypes = {
 	FUNCTION : [ "body" ], // also: name, params, functionForm, funDecls, varDecls
 	VAR : [  ], // operands?
 	CONST : [  ], // operands?
-	IDENTIFIER : ["initializer"] // also name, readOnly
+	IDENTIFIER : ["initializer"], // also name, readOnly
+	
+	// Extensions:
+	GOTO : []
 }
 
 //function addSetter(object, name, index) {
@@ -504,6 +507,33 @@ var StatementMethods = {
 			var n = new Node(t, "LABEL");
 			n.label = label;
 			n.setStatement(Statement(t, x));
+			return [n];
+		}
+		else {
+			var n = new Node(t, "SEMICOLON");
+			t.unget();
+			n.setExpression(Expression(t, x));
+			n.end = n.expression.end;
+			StatementEnd(t,x);
+			return [n];
+		}
+	},
+
+	// Extensions:
+	
+	"GOTO": function(t, x) {
+		// TODO: Peek for operators not operands. Why? If goto is the first token in an expression, the next is an operator. If goto is the first token
+		// in a goto statement, the next token is a label - which will be correctly identified by a peek operator call.
+		var tt = t.peekOnSameLine();
+
+		// TODO: Better way of identifying possible labels and variables
+		//       - remember that GOTO (and some others) can be both.
+		if(tt == "IDENTIFIER") {
+			// TODO: Duplicate of BREAK/CONTINUE (sort of).
+			var n = new Node(t);
+			t.getOperand();
+			n.label = t.token().value;
+			StatementEnd(t,x);
 			return [n];
 		}
 		else {
