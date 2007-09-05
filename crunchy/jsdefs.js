@@ -102,11 +102,22 @@ Crunchy.tokens = [
 
 	// TODO: I should probably accept the future keywords as identifiers
 
-	// Sort of parsed future keywords.
-	"const", "debugger", "enum",
+	// es4 keywords (enum is currently 'sort of parsed')
+	
+	"class", "enum", "extends", "super",
 
-	// Future Keywords
-	"abstract", "enum", "int", "short", "boolean", "export", "interface", "static", "byte", "extends", "long", "super", "char", "final", "native", "synchronized", "class", "float", "package", "throws", "const", "goto", "private", "transient", "debugger", "implements", "protected", "volatile", "double", "import", "public"
+	// Contextually reserved identifiers (debugger, const 'sort of parsed')
+
+	"const", "debugger", "double", "final", "implements", "import", "int",
+	"interface", "native", "package", "private", "protected", "public",
+	"static",
+
+	// Formerly future keywords, but no longer that I support anyway because I
+	// like to be harmful.
+	//
+	// TODO: Make this an option.
+
+	"goto" 
 ];
 
 // Operator and punctuator mapping from token to tree node type name.
