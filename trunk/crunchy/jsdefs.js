@@ -98,8 +98,10 @@ Crunchy.tokens = [
 	"true", "false",
 
 	// Null Literal
-	"null",
+	"null"
+];
 
+Crunchy.contextuallyReservedTokens = [
 	// TODO: I should probably accept the future keywords as identifiers
 
 	// es4 keywords (enum is currently 'sort of parsed')
@@ -210,6 +212,13 @@ Crunchy.opArity = {
 	NEW: 1, NEW_WITH_ARGS: 2, DOT: 2, INDEX: 2, CALL: 2,
 	ARRAY_INIT: 1, OBJECT_INIT: 1, GROUP: 1
 };
+
+var contextuallyReservedKeywords = {}
+
+Crunchy.contextuallyReservedTokens.forEach(function(t) {
+	Crunchy.tokens.push(t);
+	contextuallyReservedKeywords[t] = t.toUpperCase();
+});
 
 var keywords = {};
 

@@ -93,9 +93,9 @@ Crunchy.Tokenizer.prototype = {
 	_peek: function (scanOperand) {
 		var tt;
 		if (this._lookahead) {
-			tt = this._tokens[(this._tokenIndex + this._lookahead) & 3].type;
+			tt = this._tokens[(this._tokenIndex + this._lookahead) & 3];
 		} else {
-			tt = this.getToken(scanOperand);
+			tt = this.getToken2(scanOperand);
 			this.unget();
 		}
 		return tt;
@@ -117,7 +117,7 @@ Crunchy.Tokenizer.prototype = {
 		token.text = text;
 		token.value = typeof(value) === "string" ? value : text;
 		token.assignOp = null;
-		token.isProperty = type == "IDENTIFIER";
+		token.isProperty = false;
 		token.scanOperand = null;
 		return token;
 	},
@@ -130,7 +130,7 @@ Crunchy.Tokenizer.prototype = {
 
 	_getKeyword : function(self, text) {
 		var token = self._newToken(Crunchy.lookupKeyword(text), text)
-		token.isProperty = true;
+		token.isProperty = !!contextuallyReservedKeywords[text];
 		return token;
 	},
 
@@ -253,6 +253,10 @@ Crunchy.Tokenizer.prototype = {
 	},
 
 	getToken : function(scanOperand) {
+		return this.getToken2(scanOperand).type;
+	},
+
+	getToken2 : function(scanOperand) {
 		while (this._lookahead) {
 			--this._lookahead;
 			this._tokenIndex = (this._tokenIndex + 1) & 3;
@@ -260,14 +264,14 @@ Crunchy.Tokenizer.prototype = {
 			if (token.type != "NEWLINE" || this._scanNewlines) {
 				if(token.scanOperand != null && token.scanOperand != scanOperand)
 					console.info("Invalid scanOperand");
-				return token.type;
+				return token;
 			}
 		}
 
 		do {
 			if(this._cursor >= this.source.length) {
 				var token = this._newToken("END");
-				return token.type;
+				return token;
 			}
 			// TODO: What happens if source ends with non-newline whitespace?
 			var match = this._matchRegExp(Crunchy._tokenRegExp);
@@ -283,7 +287,7 @@ Crunchy.Tokenizer.prototype = {
 		this._cursor += token.text.length;
 		token.end = this._cursor;
 		token.lineno = this.lineno;
-		return token.type;
+		return token;
 	},
 
 	unget: function () {
