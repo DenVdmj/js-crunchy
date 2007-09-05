@@ -225,7 +225,8 @@ Crunchy.Writer.prototype = {
 			break;
 		case "BREAK":
 		case "CONTINUE":
-			this.write(s.type == "BREAK" ? 'break' : 'continue');
+		case "GOTO":
+			this.write(Crunchy.tokens[s.type]);
 			if(s.label) this.write(s.label);
 			break;
 		case "TRY":
