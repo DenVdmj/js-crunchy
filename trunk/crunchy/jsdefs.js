@@ -168,6 +168,7 @@ Crunchy.opTypeNames = {
 
 // TODO: Add missing precedences (INDEX? Any others?)
 Crunchy.opPrecedence = {
+	INDEX: -1, CALL: -1, GROUP: -1, NEW_WITH_ARGS: -1,
 	SEMICOLON: 0,
 	COMMA: 1,
 	ASSIGN: 2, HOOK: 2, COLON: 2, CONDITIONAL: 2,
