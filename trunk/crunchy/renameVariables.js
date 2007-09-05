@@ -73,12 +73,12 @@
 			Crunchy.error("Creating ScopeVar without scope.");
 		this.name = name;
 		this.scopes = [scope];
-		this.fixed = scope.mutable;
+		this.fixed = scope.fixVariableNames;
 	}
 
-	var Scope = function(parent, mutable) {
+	var Scope = function(parent, fixVariableNames) {
 		this.parent = parent;
-		this.mutable = mutable;
+		this.fixVariableNames = fixVariableNames;
 		this.decls = new Crunchy.Hash;
 		this.refs = new Crunchy.Hash;
 	}
@@ -115,7 +115,7 @@
 				if (this.parent) {
 					x = this.refs.insert(name, this.parent.refVar(name));
 					x.scopes.push(this);
-					x.fixed = x.fixed || this.mutable;
+					x.fixed = x.fixed || this.fixVariableNames;
 				}
 				else {
 					x = this.decls.insert(name, new ScopeVar(name, this));
@@ -148,7 +148,7 @@
 
 			switch(node.type) {
 			case "SCRIPT":
-				// This scope is the global scope, so set it to mutable
+				// This scope is the global scope, so fix variable names
 				node.scope = new Scope(currentScope, true);
 				ScopeList.push(node.scope);
 				node.scope.setVars(node);
@@ -167,10 +167,7 @@
 				break;
 			case "CALL":
 				// Calls to eval can add variables or access variables in parent scopes.
-				// So need to set them all to mutable (mutable is looking like a silly name
-				// the idea was to fix names for scopes like the global scope and those
-				// for with statements which can change - but in this case it has to be fixed
-				// because it can be accessed by dynamic code).
+				// So need to fix the variable names in all those scopes.
 				//
 				// There are tons of cases that this doesn't catch but I think it
 				// would be impossible to deal with them all. I can't even detect:
@@ -284,7 +281,7 @@
 				else {
 					v.oldName = v.name;
 					delete v.name;
-					v.mark = -1;
+					v["Crunchy::rename::mark"] = -1;
 					variables.push(v);
 				}
 			});
@@ -297,10 +294,10 @@
 			function markClashes(scopes) {
 				for(var i = 0; i < scopes.length; ++i) {
 					scopes[i].decls.forEach(function(index, value){
-						value.mark = id;
+						value["Crunchy::rename::mark"] = id;
 					});
 					scopes[i].refs.forEach(function(index, value){
-						value.mark = id;
+						value["Crunchy::rename::mark"] = id;
 					});
 				}
 			}
@@ -313,7 +310,7 @@
 
 			var i = 0;
 			while(i < variables.length) {
-				if(!variables[i].name && variables[i].mark != id) {
+				if(!variables[i].name && variables[i]["Crunchy::rename::mark"] != id) {
 					variables[i].name = newName;
 					markClashes(variables[i].scopes);
 					variables.splice(i, 1);
