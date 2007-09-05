@@ -292,6 +292,7 @@
 
 		for(var id = 0; variables.length > 0; ++id) {
 			var newName = genName(id);
+			if(Crunchy.lookupKeyword(newName)) continue;
 
 			function markClashes(scopes) {
 				for(var i = 0; i < scopes.length; ++i) {
