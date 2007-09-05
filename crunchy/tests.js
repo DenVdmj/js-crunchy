@@ -200,5 +200,9 @@ runTest("var x=[0,1,2][1]", "test(x == 1)");
 runTest("var x=[[0,1],[2,3],[4,5]][1][0]", "test(x == 2)");
 runTest("var x=[[0,1],[2,3],[4,5]][1+1][1-1]", "test(x == 4)");
 
+runTest("var x={'for':1,blah:2}","test(x['for']==1 && x.blah==2)");
+
+runTest("function flump() { return 1; } function blah() { return flump(); { function flump() { return 2; } } } var x = blah();", "test_result(x)");
+
 /**/
 print("Finished!");
