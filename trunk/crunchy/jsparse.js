@@ -584,7 +584,6 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	f.params = params;
 
 	t.mustMatchOperator("LEFT_CURLY");
-console.log(f);
 	f.setBody(ParseCompilerContext(t, f, true));
 	t.mustMatchOperand("RIGHT_CURLY");
 	f.end = t.token().end;
