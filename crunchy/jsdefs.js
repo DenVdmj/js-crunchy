@@ -235,6 +235,10 @@ for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 	Crunchy.tokens[tt] = t;
 }
 
+// Messy....
+Crunchy.tokens["GETTER"] = "get";
+Crunchy.tokens["SETTER"] = "set";
+
 Crunchy.lookupKeyword = function(keyword) {
 	return keywords[keyword] || false;
 }
