@@ -245,8 +245,7 @@ Crunchy.STATEMENT_FORM = 2;
 function Statement(t, x) {
 	// TODO: Here we might have previously called 'peekOperator', and
 	// auto-inserted a semi-colon.
-	var tt = t.getOperand();
-	return (StatementMethods[tt] || StatementMethods['default'])(t, x, tt);
+	return (StatementMethods[t.getOperand()] || StatementMethods['default'])(t, x);
 }
 
 var StatementMethods = {
@@ -432,13 +431,13 @@ var StatementMethods = {
 
 	},
 
-	"CATCH" : function(t, x, tt) {
+	"CATCH" : function(t, x) {
 		// TODO: Duplicate of FINALLY
-		throw t.newSyntaxError(Crunchy.tokens[tt] + " without preceding try");
+		throw t.newSyntaxError("catch without preceding try");
 	},
-	
-	"FINALLY" : function(t, x, tt) {
-		throw t.newSyntaxError(Crunchy.tokens[tt] + " without preceding try");
+
+	"FINALLY" : function(t, x) {
+		throw t.newSyntaxError("finally without preceding try");
 	},
 
 	"THROW" : function(t, x) {
