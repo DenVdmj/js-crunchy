@@ -844,12 +844,12 @@ function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
 
 function ExpressionColon(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
-	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
-		operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN")
+	while (operators.length && (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
+		operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))
 		ReduceExpression(t, operators, operands);
 
 	var n = operators.top();
-	if (n.type != "HOOK")
+	if (!n || n.type != "HOOK")
 		throw t.newSyntaxError("Invalid label");
 	n.type = "CONDITIONAL";
 	--x.hookLevel;
