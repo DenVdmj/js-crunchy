@@ -154,16 +154,22 @@
 				node.scope.setVars(node);
 				break;
 			case "FUNCTION":
-				// TODO: For named function expressions
-				// should I be adding node.name2 to the function's
-				// scope? I think yes. Maybe also for DECLARED_FORM
-				// if I start to do static analysis.
-				if(node.name) node.name2 = currentScope.refVar(node.name);
-				// fall through....
 			case "GETTER":
 			case "SETTER":
 				node.scope = new Scope(currentScope, false);
 				ScopeList.push(node.scope);
+
+				// TODO: Is this right for STATEMENT_FORM?
+				if(node.type == "FUNCTION" && node.name) {
+					if(node.functionForm == Crunchy.EXPRESSED_FORM) {
+						node.name2 = new ScopeVar(node.name, node.scope);
+						node.scope.decls.insert(node.name, node.name2);
+					}
+					else {
+						node.name2 = currentScope.refVar(node.name);
+					}
+				}
+
 				node.params2 = node.scope.setParams(node.params);
 				node.scope.setVars(node);
 				break;
