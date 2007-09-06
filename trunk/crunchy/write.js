@@ -330,6 +330,8 @@ Crunchy.Writer.prototype = {
 		var op = Crunchy.tokens[e.type].toLowerCase();
 		switch(e.type) {
 		case "FUNCTION":
+		case "GETTER":
+		case "SETTER":
 			this.writeFunction(e);
 			break;
 		case "EMPTY":
@@ -490,8 +492,9 @@ Crunchy.Writer.prototype = {
 		var needBrackets = node.functionForm == Crunchy.EXPRESSED_FORM &&
 			(this.needEnd || this.statementStart);
 		if(needBrackets) this.write('(');
-		this.write('function');
+		this.write(Crunchy.tokens[node.type]);
 		if(node.name2) this.write(node.name2.name);
+		else if(node.name) this.write(node.name);
 		this.write('(');
 		for(var i = 0; i < node.params2.length; ++i) {
 			if(i != 0) this.write(',');

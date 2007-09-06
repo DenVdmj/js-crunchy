@@ -205,5 +205,10 @@ runTest("var x={'for':1,blah:2}","test(x['for']==1 && x.blah==2)");
 runTest("function flump() { return 1; } function blah() { return flump(); { function flump() { return 2; } } } var x = blah();", "test_result(x)");
 runTest("var x=0;while(x<1){goto\n:while(x<5){while(x<10){break goto;x+=10}x+=5}x+=1}", "test(x==1)"); 
 
+runTest("function test() { var bang = {x:1}; (function bang() { bang.x = 2})(); return bang.x; } var x = test()", "test(x == 1)");
+
+runTest("var o = {a:7, get b() {return this.a+1; }, set c(x) {this.a = x/2}};",
+		"test(o.a == 7 && o.b == 8); o.c = 50; test(o.a == 25 && o.b == 26)");
+
 /**/
 print("Finished!");

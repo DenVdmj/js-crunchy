@@ -154,9 +154,14 @@
 				node.scope.setVars(node);
 				break;
 			case "FUNCTION":
-				// TODO: type == GETTER/SETTER
-				// TODO: functionForm?
+				// TODO: For named function expressions
+				// should I be adding node.name2 to the function's
+				// scope? I think yes. Maybe also for DECLARED_FORM
+				// if I start to do static analysis.
 				if(node.name) node.name2 = currentScope.refVar(node.name);
+				// fall through....
+			case "GETTER":
+			case "SETTER":
 				node.scope = new Scope(currentScope, false);
 				ScopeList.push(node.scope);
 				node.params2 = node.scope.setParams(node.params);

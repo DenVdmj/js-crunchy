@@ -91,7 +91,9 @@ var NodeTypes = {
 	IDENTIFIER : ["initializer"], // also name, readOnly
 	
 	// Extensions:
-	GOTO : []
+	GOTO : [],
+	GETTER : [ "body" ], // also: name, params, functionForm, funDecls, varDecls
+	SETTER : [ "body" ]  // also: name, params, functionForm, funDecls, varDecls
 }
 
 //function addSetter(object, name, index) {
@@ -550,10 +552,15 @@ function StatementEnd(t, x) {
 }
 
 function FunctionDefinition(t, x, requireName, functionForm) {
-	var f = new Node(t);
-	// TODO: This doesn't work.
-	if (f.type != "FUNCTION")
-		f.type = (f.value == "get") ? "GETTER" : "SETTER";
+	var token = t.token();
+
+	if(token.type == "FUNCTION") var type = "FUNCTION";
+	else if(token.value == "get") var type = "GETTER";
+	else if(token.value == "set") var type = "SETTER";
+	else throw("Invalid function.")
+
+	var f = new Node(t, type);
+
 	// TODO: isProperty
 	if (t.matchOperand("IDENTIFIER"))
 		f.name = t.token().value;
@@ -577,6 +584,7 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	f.params = params;
 
 	t.mustMatchOperator("LEFT_CURLY");
+console.log(f);
 	f.setBody(ParseCompilerContext(t, f, true));
 	t.mustMatchOperand("RIGHT_CURLY");
 	f.end = t.token().end;
