@@ -500,9 +500,8 @@ var StatementMethods = {
 		return [n];
 	},
 
-	"default": function(t, x, tt) {
-		// TODO: isProperty
-		if (tt == "IDENTIFIER" && t.peekOperator().type == "COLON")
+	"default": function(t, x) {
+		if (t.token().isProperty && t.peekOperator().type == "COLON")
 		{
 			var label = t.token().value;
 			t.getOperand();
@@ -537,12 +536,7 @@ var StatementMethods = {
 			return [n];
 		}
 		else {
-			var n = new Node(t, "SEMICOLON");
-			t.unget();
-			n.setExpression(Expression(t, x));
-			n.end = n.expression.end;
-			StatementEnd(t,x);
-			return [n];
+			return StatementMethods['default'](t, x);
 		}
 	}
 }

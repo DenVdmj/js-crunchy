@@ -91,13 +91,8 @@ Crunchy.Tokenizer.prototype = {
 	},
 
 	_peek: function (scanOperand) {
-		var tt;
-		if (this._lookahead) {
-			tt = this._tokens[(this._tokenIndex + this._lookahead) & 3];
-		} else {
-			tt = this.getToken2(scanOperand);
-			this.unget();
-		}
+		var tt = this.getToken2(scanOperand);
+		this.unget();
 		return tt;
 	},
 
@@ -290,9 +285,14 @@ Crunchy.Tokenizer.prototype = {
 		return token;
 	},
 
+	// TODO: Usually unget is not the right option - the option is to be able
+	// to either: peek without changing the _tokenIndex or return to a previous
+	// point.
 	unget: function () {
-		if (++this._lookahead == 4) throw "PANIC: too much lookahead!";
-		this._tokenIndex = (this._tokenIndex - 1) & 3;
+		do {
+			if (++this._lookahead == 4) throw "PANIC: too much lookahead!";
+			this._tokenIndex = (this._tokenIndex - 1) & 3;
+		} while(this._tokens[this._tokenIndex] && this._tokens[this._tokenIndex].type == "NEWLINE");
 	},
 
 	newSyntaxError: function (m) {
