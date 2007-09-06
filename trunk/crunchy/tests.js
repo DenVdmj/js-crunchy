@@ -203,6 +203,7 @@ runTest("var x=[[0,1],[2,3],[4,5]][1+1][1-1]", "test(x == 4)");
 runTest("var x={'for':1,blah:2}","test(x['for']==1 && x.blah==2)");
 
 runTest("function flump() { return 1; } function blah() { return flump(); { function flump() { return 2; } } } var x = blah();", "test_result(x)");
+runTest("var x=0;while(x<1){goto\n:while(x<5){while(x<10){break goto;x+=10}x+=5}x+=1}", "test(x==1)"); 
 
 /**/
 print("Finished!");
