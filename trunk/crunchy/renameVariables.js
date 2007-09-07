@@ -58,32 +58,31 @@
 	}
 })();
 
-(function(){
 	Crunchy.renameVariables = function(root) {
-		findVariables(root);
-		rename(root);
+		Crunchy.renameVariables.findVariables(root);
+		Crunchy.renameVariables.rename(root);
 		//findSpecialNames(root);
 	}
 
 	// Scopes
 
-	var ScopeVar = function(name, scope) {
+	Crunchy.renameVariables.ScopeVar = function(name, scope) {
 		//if(!(scope instanceof Scope))
 		if(!scope)
 			Crunchy.error("Creating ScopeVar without scope.");
 		this.name = name;
 		this.scopes = [scope];
 		this.fixed = scope.fixVariableNames;
-	}
+	};
 
-	var Scope = function(parent, fixVariableNames) {
+	Crunchy.renameVariables.Scope = function(parent, fixVariableNames) {
 		this.parent = parent;
 		this.fixVariableNames = fixVariableNames;
 		this.decls = new Crunchy.Hash;
 		this.refs = new Crunchy.Hash;
 	}
 
-	Scope.prototype = {
+	Crunchy.renameVariables.Scope.prototype = {
 		setVars : function(parsed) {
 			var decls = this.decls;
 			var scope = this;
@@ -91,7 +90,7 @@
 			function addVar(node) {
 				if(!decls.contains(node.name)) {
 					decls.insert(node.name,
-						new ScopeVar(node.name, scope));
+						new Crunchy.renameVariables.ScopeVar(node.name, scope));
 				}
 			}
 
@@ -102,7 +101,7 @@
 		setParams : function(p) {
 			var result = [];
 			for(var i = 0; i < p.length; ++i) {
-				var x = new ScopeVar(p[i], this);
+				var x = new Crunchy.renameVariables.ScopeVar(p[i], this);
 				result[i] = x;
 				this.decls.insert(p[i], x);
 			}
@@ -118,7 +117,7 @@
 					x.fixed = x.fixed || this.fixVariableNames;
 				}
 				else {
-					x = this.decls.insert(name, new ScopeVar(name, this));
+					x = this.decls.insert(name, new Crunchy.renameVariables.ScopeVar(name, this));
 				}
 			}
 			return x;
@@ -128,45 +127,47 @@
 			this.decls.forEach(function(name, v) { v.fixed = true })
 			this.refs.forEach(function(name, v) { v.fixed = true })
 		}
-	}
+	};
 
 	// Identify the variables, and which can be changed.
 
-	function findVariables(root) {
-		var currentScope = null;
-		var ScopeList = [];
-		root.scopeList = ScopeList;
-		loop(root);
+	Crunchy.renameVariables.findVariables = function(root) {
+		root.scopeList = [];
+		this.findVariablesLoop(root, {
+			currentScope : null,
+			ScopeList : root.scopeList
+		});
+	}
 
-		function loop(node, scope) {
+	Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 			if(!node) return;
 			if(node.constructor == Array) {
 				for(var i = 0; i < node.length; ++i)
-					loop(node[i]);
+					this.findVariablesLoop(node[i], x);
 				return;
 			}
 
 			switch(node.type) {
 			case "SCRIPT":
 				// This scope is the global scope, so fix variable names
-				node.scope = new Scope(currentScope, true);
-				ScopeList.push(node.scope);
+				node.scope = new this.Scope(x.currentScope, true);
+				x.ScopeList.push(node.scope);
 				node.scope.setVars(node);
 				break;
 			case "FUNCTION":
 			case "GETTER":
 			case "SETTER":
-				node.scope = new Scope(currentScope, false);
-				ScopeList.push(node.scope);
+				node.scope = new this.Scope(x.currentScope, false);
+				x.ScopeList.push(node.scope);
 
 				// TODO: Is this right for STATEMENT_FORM?
 				if(node.type == "FUNCTION" && node.name) {
 					if(node.functionForm == Crunchy.EXPRESSED_FORM) {
-						node.name2 = new ScopeVar(node.name, node.scope);
+						node.name2 = new this.ScopeVar(node.name, node.scope);
 						node.scope.decls.insert(node.name, node.name2);
 					}
 					else {
-						node.name2 = currentScope.refVar(node.name);
+						node.name2 = x.currentScope.refVar(node.name);
 					}
 				}
 
@@ -174,7 +175,7 @@
 				node.scope.setVars(node);
 				break;
 			case "IDENTIFIER":
-				node.ref = currentScope.refVar(node.value);
+				node.ref = x.currentScope.refVar(node.value);
 				break;
 			case "CALL":
 				// Calls to eval can add variables or access variables in parent scopes.
@@ -186,46 +187,46 @@
 				// Although, that's not strictly standard ECMAscript.
 
 				if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
-					for(var i = currentScope; i; i = i.parent)
+					for(var i = x.currentScope; i; i = i.parent)
 						i.setMutable();
 				}
 				break;
 			case "WITH":
-				node.scope = new Scope(currentScope, true);
-				loop(node.object);
-				ScopeList.push(node.scope);
-				var oldScope = currentScope;
-				currentScope = node.scope;
-				loop(node.body);
-				currentScope = oldScope;
+				node.scope = new this.Scope(x.currentScope, true);
+				this.findVariablesLoop(node.object, x);
+				x.ScopeList.push(node.scope);
+				var oldScope = x.currentScope;
+				x.currentScope = node.scope;
+				this.findVariablesLoop(node.body, x);
+				x.currentScope = oldScope;
 				return;
 			case "CATCH":
-				node.scope = new Scope(currentScope);
-				ScopeList.push(node.scope);
-				node.varRef = new ScopeVar(node.varName, node.scope);
+				node.scope = new this.Scope(x.currentScope);
+				x.ScopeList.push(node.scope);
+				node.varRef = new this.ScopeVar(node.varName, node.scope);
 				node.scope.decls.insert(node.varName, node.varRef);
 				break;
 			default:
-				loop(node.children);
+				this.findVariablesLoop(node.children, x);
 				return;
 			}
 
 			if(node.scope) {
-				var oldScope = currentScope;
-				currentScope = node.scope;
+				var oldScope = x.currentScope;
+				x.currentScope = node.scope;
 			}
 
-			loop(node.children);
+			this.findVariablesLoop(node.children, x);
 
 			if(oldScope) {
-				currentScope = oldScope;
+				x.currentScope = oldScope;
 			}
-		}
-	}
+	};
 
 	// Build up data arrays of characters to be used for generating variable
 	// names.
 
+(function() {
 	function addChars(first, last, array) {
 		for(var i = first.charCodeAt(0), j = last.charCodeAt(0); i <= j; ++i)
 			array.push(String.fromCharCode(i));
@@ -236,16 +237,20 @@
 	addChars('A', 'Z', chars1);
 	var chars2 = chars1.slice();
 	addChars('0', '9', chars2);
+	Crunchy.renameVariables.chars1 = chars1;
+	Crunchy.renameVariables.chars2 = chars2;
+})();
 
-	function genName(x) {
+
+	Crunchy.renameVariables.genName = function(x){
 		var name = "";
-		var mod = x % chars1.length;
-		name += chars1[mod];
-		x = (x - mod) / chars1.length - 1;
+		var mod = x % this.chars1.length;
+		name += this.chars1[mod];
+		x = (x - mod) / this.chars1.length - 1;
 		while(x >= 0) {
-			mod = x % chars2.length;
-			name += chars2[mod];
-			x = (x - mod) / chars2.length - 1;
+			mod = x % this.chars2.length;
+			name += this.chars2[mod];
+			x = (x - mod) / this.chars2.length - 1;
 		}
 
 		return name;
@@ -253,7 +258,7 @@
 
 	// Rename the variables from root.
 
-	function rename(root) {
+	Crunchy.renameVariables.rename = function(root) {
 		var s = root.scopeList;
 		if(!s) {
 			Crunchy.error("renameVariables called for node without a scope list.");
@@ -299,7 +304,7 @@
 		}
 
 		for(var id = 0; variables.length > 0; ++id) {
-			var newName = genName(id);
+			var newName = this.genName(id);
 			if(Crunchy.lookupKeyword(newName)) continue;
 
 			function markClashes(scopes) {
@@ -332,4 +337,3 @@
 			}
 		}
 	}
-})();
