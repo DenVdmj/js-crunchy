@@ -14,7 +14,6 @@ Crunchy.Writer.prototype = {
 	invalidOp : null,
 	statementStart : false,
 	ended : true,
-	needEnd : false,
 
 	addInvalidOp : function(op, func) {
 		var old = this.invalidOp;
@@ -42,17 +41,6 @@ Crunchy.Writer.prototype = {
 	// The statement ending stuff could probably be done better
 	// by iterating over the tree, similarly some of the space insertion.
 	write : function() {
-		if(this.needEnd) {
-			if(Crunchy.opTypeNames[arguments[0]]) {
-				this.result.push(';'); this.prev = ';';
-			}
-			else {
-				this.result.push('\n'); this.prev = '\n';
-			}
-			this.needEnd = false;
-			this.ended = true;
-		}
-
 		this.ended = false;
 		this.statementStart = false;
 
@@ -93,17 +81,8 @@ Crunchy.Writer.prototype = {
 
 	seperateStatement : function() {
 		if(!this.ended) {
-			if(true) {
-				this.write(';');
-				this.ended = true;
-				this.needEnd = false;
-			}
-			else {
-				// TODO: When is it safe to use a newline? It's tricky - it's
-				// often not safe when the next line starts with a
-				// pre-increment. Any other cases?
-				this.needEnd = true;
-			}
+			this.write(';');
+			this.ended = true;
 		}
 	},
 
@@ -489,8 +468,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeFunction : function(node) {
-		var needBrackets = node.functionForm == Crunchy.EXPRESSED_FORM &&
-			(this.needEnd || this.statementStart);
+		var needBrackets = node.functionForm == Crunchy.EXPRESSED_FORM && this.statementStart;
 		if(needBrackets) this.write('(');
 		this.write(Crunchy.tokens[node.type]);
 		if(node.name2) this.write(node.name2.name);
