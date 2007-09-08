@@ -40,12 +40,11 @@ Crunchy.Writer.prototype = {
 	// TODO: This is dire, I should do it much more intelligently.
 	// The statement ending stuff could probably be done better
 	// by iterating over the tree, similarly some of the space insertion.
-	write : function() {
+	write : function(x) {
 		this.ended = false;
 		this.statementStart = false;
 
-		for(var i = 0; i < arguments.length; ++i) {
-			var token = String(arguments[i]);
+			var token = String(x);
 
 			if(this.prev) {
 				switch(this.prev) {
@@ -72,7 +71,6 @@ Crunchy.Writer.prototype = {
 			}
 			this.result.push(token);
 			this.prev = token.charAt(token.length-1);
-		}
 	},
 
 	endStatement : function() {
@@ -142,7 +140,8 @@ Crunchy.Writer.prototype = {
 					this.endStatement();
 					break;
 				case "DEFAULT":
-					this.write('default', ':');
+					this.write('default');
+					this.write(':');
 					this.endStatement();
 					break;
 				default:
@@ -156,7 +155,8 @@ Crunchy.Writer.prototype = {
 			this.endStatement();
 			break;
 		case "FOR":
-			this.write('for','(');
+			this.write('for');
+			this.write('(');
 			if(s.setup) this.addInvalidOp('IN', function() {
 				this.writeExpressionOrVar(s.setup);
 			});
@@ -168,7 +168,8 @@ Crunchy.Writer.prototype = {
 			this.writeBlock(s.body);
 			break;
 		case "FOR_IN":
-			this.write('for','(');
+			this.write('for');
+			this.write('(');
 			this.addInvalidOp('IN', function() {
 				this.writeExpressionOrVar(s.iterator);
 			});
@@ -178,7 +179,8 @@ Crunchy.Writer.prototype = {
 			this.writeBlock(s.body);
 			break;
 		case "WHILE":
-			this.write('while','(');
+			this.write('while');
+			this.write('(');
 			this.writeExpression(s.condition);
 			this.write(')');
 			this.writeBlock(s.body);
@@ -190,7 +192,8 @@ Crunchy.Writer.prototype = {
 			// javascript implementations think they are.
 			this.writeBlock(s.body, true);
 			this.seperateStatement();
-			this.write('while','(');
+			this.write('while');
+			this.write('(');
 			this.writeExpression(s.condition);
 			this.write(')');
 
@@ -212,7 +215,8 @@ Crunchy.Writer.prototype = {
 			this.write('try');
 			this.writeBlock(s.tryBlock, true);
 			for(var i = 0; i < s.catchClauses.length; ++i) {
-				this.write('catch','(');
+				this.write('catch');
+				this.write('(');
 				this.write(s.catchClauses[i].varRef ?
 						s.catchClauses[i].varRef.name :
 						s.catchClauses[i].varName);
@@ -237,7 +241,8 @@ Crunchy.Writer.prototype = {
 			if(s.returnValue) this.writeExpression(s.returnValue);
 			break;
 		case "WITH":
-			this.write('with','(');
+			this.write('with');
+			this.write('(');
 			this.writeExpression(s.object);
 			this.write(')');
 			this.writeBlock(s.body);
@@ -259,7 +264,8 @@ Crunchy.Writer.prototype = {
 			}
 			break;
 		case "LABEL":
-			this.write(s.label,':');
+			this.write(s.label);
+			this.write(':');
 			this.writeBlock(s.statement);
 			break;
 		case "DEBUG_SEMICOLON":
