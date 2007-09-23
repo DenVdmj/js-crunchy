@@ -212,5 +212,7 @@ runTest("function test() { var bang = {x:1}; (function bang() { bang.x = 2})(); 
 runTest("var o = {a:7, get b() {return this.a+1; }, set c(x) {this.a = x/2}};",
 		"test(o.a == 7 && o.b == 8); o.c = 50; test(o.a == 25 && o.b == 26)");
 
+runTest("var x = /([\"'\\f\\b\\n\\t\\r])/gm", "test_result(x.toString())");
+
 /**/
 print("Finished!");
