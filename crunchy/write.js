@@ -77,7 +77,7 @@ Crunchy.Writer.prototype = {
 		this.ended = false;
 		this.statementStart = false;
 
-		if(this.prev == this.prevString)
+		if(this.prev === this.prevString)
 			this.result.push(' ');
 
 		this.result.push(x);
@@ -90,7 +90,7 @@ Crunchy.Writer.prototype = {
 
 		var token = String(x);
 
-		if(this.prev == this.prevString || this.prev == this.PrevNumber)
+		if(this.prev === this.prevString || this.prev === this.prevNumber)
 			this.result.push(' ');
 
 		this.result.push(token);
@@ -436,7 +436,6 @@ Crunchy.Writer.prototype = {
 		case "BITWISE_OR": case "BITWISE_XOR": case "BITWISE_AND":
 		case "EQ": case "NE": case "STRICT_EQ": case "STRICT_NE":
 		case "LT": case "LE": case "GE": case "GT":
-		case "IN": case "INSTANCEOF":
 		case "LSH": case "RSH": case "URSH":
 		case "MUL": case "DIV": case "MOD":
 			if(precedence > Crunchy.opPrecedence[e.type])
@@ -444,6 +443,17 @@ Crunchy.Writer.prototype = {
 			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type]);
 			for(var i = 1; i < e.children.length; ++i) {
 				this.write(op);
+				this.writeExpression(e.children[i], Crunchy.opPrecedence[e.type] + 1);
+			}
+			if(precedence > Crunchy.opPrecedence[e.type])
+				this.write(')');
+			break;
+		case "IN": case "INSTANCEOF":
+			if(precedence > Crunchy.opPrecedence[e.type])
+				this.write('(');
+			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type]);
+			for(var i = 1; i < e.children.length; ++i) {
+				this.writeWord(op);
 				this.writeExpression(e.children[i], Crunchy.opPrecedence[e.type] + 1);
 			}
 			if(precedence > Crunchy.opPrecedence[e.type])
