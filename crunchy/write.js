@@ -580,8 +580,13 @@ Crunchy.Writer.prototype = {
 			//
 			// https://bugzilla.mozilla.org/show_bug.cgi?id=238945
 			//
-			// TODO: Should probably deal with the DO special case somewhere better.
-			if(curliesRequired || statements.length > 1 || statements[0].type == "DO") {
+			// Special case for FUNCTION: konqueror has problems with things like:
+			//   if(true) function f() {}
+			//
+			// TODO: Should probably deal with these special cases somewhere better.
+			if(curliesRequired || statements.length > 1 ||
+					statements[0].type == "DO" ||
+					statements[0].type == "FUNCTION") {
 				// clearInvalidOps
 				// TODO: Why not in the other paths?
 				var old = this.invalidOp;
