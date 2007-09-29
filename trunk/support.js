@@ -1,6 +1,6 @@
 if(this.window && this == this.window) {
 	this.print = function(x) {
-		document.write(x);
+		document.write(x.replace(/\r\n?|\n/g, '<br>').replace('<', '&lt;').replace('>', '&gt;'));
 		document.write("<br>");
 	}
 }
