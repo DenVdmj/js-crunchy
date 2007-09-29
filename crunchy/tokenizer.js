@@ -125,7 +125,7 @@ Crunchy.Tokenizer.prototype = {
 
 	_getKeyword : function(self, text) {
 		var token = self._newToken(Crunchy.lookupKeyword(text), text)
-		token.isProperty = !!contextuallyReservedKeywords[text];
+		token.isProperty = !!Crunchy.contextuallyReservedKeywords[text];
 		return token;
 	},
 
