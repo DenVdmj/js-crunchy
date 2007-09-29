@@ -77,7 +77,10 @@ Crunchy.Writer.prototype = {
 		this.ended = false;
 		this.statementStart = false;
 
-		if(this.prev === this.prevString)
+		// Originally I didn't think that a number followed by a word
+		// needed a space, but one of my tests was failling on konqueror
+		// (something like 1 in [1,2] => 1in[1,2]).
+		if(this.prev === this.prevString || this.prev === this.prevNumber)
 			this.result.push(' ');
 
 		this.result.push(x);
