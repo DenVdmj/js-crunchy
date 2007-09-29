@@ -1,4 +1,6 @@
-(function() { return this; })().Crunchy = {}
+(function() {
+	if(!this.Crunchy) this.Crunchy = {}
+})();
 
 // TODO: Make better use of Crunchy.error
 Crunchy.error = function(x) {

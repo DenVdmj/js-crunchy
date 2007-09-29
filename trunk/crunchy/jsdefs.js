@@ -213,11 +213,11 @@ Crunchy.opArity = {
 	ARRAY_INIT: 1, OBJECT_INIT: 1, GROUP: 1
 };
 
-var contextuallyReservedKeywords = {}
+Crunchy.contextuallyReservedKeywords = {}
 
 Crunchy.contextuallyReservedTokens.forEach(function(t) {
 	Crunchy.tokens.push(t);
-	contextuallyReservedKeywords[t] = t.toUpperCase();
+	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
 var keywords = {};
