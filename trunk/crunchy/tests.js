@@ -1,37 +1,49 @@
 load("crunchy.js");
 
 function runTest(code, test) {
+	var errors = []
+
 	try {
 		var crunched = Crunchy.crunch(code);
 	}
 	catch(e) {
-		print("Crunch error: " + e);
-		print("Code:");
-		print(code);
-		print();
-		return;
+		errors[errors.length] = {
+			type: 'Crunch errror',
+			error: e
+		}
 	}
 
-	var result1 = runTestImpl("Without crunch", code, test);
-	var result2 = runTestImpl("With crunch", crunched, test);
+	var result1 = runTestImpl("original code", code, test, errors);
+	if(crunched) {
+		var result2 = runTestImpl("crunched code", crunched, test, errors);
 
-	if(result1 !== result2) {
-		print("Inconsistent results");
-		print("result1: " + result1);
-		print("result2: " + result2);
-		print("Code:");
+		if(result1 !== result2) {
+			errors[errors.length]= 'Inconsistent results, result1: ' + result1 + ' result2: ' + result2;
+		}
+	}
+
+	if(errors.length) {
+		print("Errors:");
+		for(var i = 0; i < errors.length; ++i) {
+			print((i + 1) + ': ' + errors[i]);
+		}
+		print("");
+		print("Original code:");
 		print(code);
-		print();
+		print("");
+		if(crunched) {
+			print("Crunched code:");
+			print(crunched);
+			print("");
+		}
+		print("");
 	}
 }
 
-function runTestImpl($$$label, $$$code, $$$test) {
+function runTestImpl($$$label, $$$code, $$$test, $$$errors) {
 	function test(result) {
 		if(!result) {
-			print($$$label + ": ERROR");
-			print("Code:");
-			print($$$code);
-			print();
+			$$$errors[$$$errors.length] = 'Error running ' + $$$label
 		}
 	}
 
@@ -46,10 +58,7 @@ function runTestImpl($$$label, $$$code, $$$test) {
 		eval($$$test);
 	}
 	catch(e) {
-		print($$$label + ": " + (e.message || e));
-		print("Code:");
-		print($$$code);
-		print();
+		$$$errors[$$$errors.length] = 'Exception running ' + $$$label + ': ' + e
 	}
 
 	return finalResult;

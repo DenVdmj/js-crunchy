@@ -1,9 +1,4 @@
-if(this.console) {
-	this.print = function(x) {
-		console.log(x);
-	}
-}
-else if(this.window && this == this.window) {
+if(this.window && this == this.window) {
 	this.print = function(x) {
 		document.write(x);
 		document.write("<br>");
