@@ -221,13 +221,6 @@ Crunchy.Writer.prototype = {
 			this.writeExpression(s.condition);
 			this.write(')');
 
-			// TODO: This is not valid ECMAscript. Basically all Javascript
-			// interpreters seem to automatically insert a semi-colon after a
-			// do..while (or at least they don't expect one). If this is a
-			// problem it would be better to either follow the while with a
-			// newline or wrap the do..while in curly brackets.
-			// https://bugzilla.mozilla.org/show_bug.cgi?id=238945
-			this.endStatement();
 			break;
 		case "BREAK":
 		case "CONTINUE":
@@ -576,7 +569,19 @@ Crunchy.Writer.prototype = {
 			}
 		}
 		else {
-			if(curliesRequired || statements.length > 1) {
+			// Special case for DO...WHILE loops: most implementations get
+			// semi-colon insertion wrong after do...while loops. This can
+			// cause confusion with statements such as:
+			//     if(...) do {...} while(...); else {...}
+			// where the semi-colon is interpreted as ending the if
+			// statement. I could deal with just that case, but I'd rather
+			// be safe and alway use curlies for nested do...while's - they
+			// come up very rarely anyway.
+			//
+			// https://bugzilla.mozilla.org/show_bug.cgi?id=238945
+			//
+			// TODO: Should probably deal with the DO special case somewhere better.
+			if(curliesRequired || statements.length > 1 || statements[0].type == "DO") {
 				// clearInvalidOps
 				// TODO: Why not in the other paths?
 				var old = this.invalidOp;
