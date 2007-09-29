@@ -214,5 +214,8 @@ runTest("var o = {a:7, get b() {return this.a+1; }, set c(x) {this.a = x/2}};",
 
 runTest("var x = /([\"'\\f\\b\\n\\t\\r])/gm", "test_result(x.toString())");
 
+runTest("var x = 0; do { ++x; } while(x < 2); ++x", "test(x == 3)");
+runTest("var x = 0; if(true) { do { x = 1 } while(false); } else { x = 2 }", "test(x == 1)");
+
 /**/
 print("Finished!");
