@@ -70,7 +70,7 @@ Crunchy.Writer.prototype = {
 		}
 
 		this.result.push(token);
-		this.prev = token.charAt(token);
+		this.prev = token.charAt(token.length - 1);
 	},
 
 	writeWord : function(x) {
