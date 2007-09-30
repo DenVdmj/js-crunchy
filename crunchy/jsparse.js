@@ -129,12 +129,8 @@ function Node(t, type) {
 	if (token) {
 		this.type = typeof(type) == "string" ? type : token.type;
 		this.value = token.value;
-		this.lineno = token.lineno;
-		this.start = token.start;
-		this.end = token.end;
 	} else {
 		this.type = type;
-		this.lineno = t.lineno;
 	}
 	this.tokenizer = t;
 	this.children = [];
@@ -159,18 +155,7 @@ Np.setType = function(type) {
 
 var OperatorNode = Node;
 
-// Always use pushOperand to add operands to an expression, to update start and end.
-
-Np.fixToken = function (kid) {
-	if (kid.start < this.start)
-		this.start = kid.start;
-	if (this.end < kid.end)
-		this.end = kid.end;
-	return kid;
-}
-
 Np.pushOperand = function (kid) {
-	this.fixToken(kid);
 	return this.children.push(kid);
 }
 
@@ -213,10 +198,6 @@ Np.toString = function () {
 	s += "\n" + INDENTATION.repeat(n) + "}";
 	return s;
 }
-
-Np.getSource = function () {
-	return this.tokenizer.source.slice(this.start, this.end);
-};
 
 Np.filename = function () { return this.tokenizer.filename; };
 
@@ -515,7 +496,6 @@ var StatementMethods = {
 			var n = new Node(t, "SEMICOLON");
 			t.unget();
 			n.setExpression(Expression(t, x));
-			n.end = n.expression.end;
 			StatementEnd(t,x);
 			return [n];
 		}
@@ -586,7 +566,6 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	t.mustMatchOperator("LEFT_CURLY");
 	f.setBody(ParseCompilerContext(t, f, true));
 	t.mustMatchOperand("RIGHT_CURLY");
-	f.end = t.token().end;
 
 	f.functionForm = functionForm;
 
@@ -997,10 +976,6 @@ function ReduceExpression(t, operators, operands) {
 		for (var i = 0; i < arity; i++)
 			n.pushOperand(a[i]);
 	}
-
-	// Include closing bracket or postfix operator in [start,end).
-	if (n.end < t.token().end)
-		n.end = t.token().end;
 
 	operands.push(n);
 	return n;

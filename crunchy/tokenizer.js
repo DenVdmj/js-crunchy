@@ -278,9 +278,7 @@ Crunchy.Tokenizer.prototype = {
 				this._getWhiteSpace)(this, c, scanOperand)
 		} while(!token)
 
-		token.start = this._cursor;
 		this._cursor += token.text.length;
-		token.end = this._cursor;
 		token.lineno = this.lineno;
 		return token;
 	},
