@@ -7,10 +7,7 @@ function runTest(code, test) {
 		var crunched = Crunchy.crunch(code);
 	}
 	catch(e) {
-		errors[errors.length] = {
-			type: 'Crunch errror',
-			error: e
-		}
+		errors[errors.length] = 'Crunch errror: ' + e;
 	}
 
 	var result1 = runTestImpl("original code", code, test, errors);
