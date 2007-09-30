@@ -385,7 +385,7 @@ Crunchy.Tokenizer.prototype = {
 	// TODO: Do some kind of survery about which token types appear most often.
 	var regExpParts = [
 		"[a-zA-Z_$][\\w$]*",              // identifiers & keywords
-		"[\\s\n\r]+",                     // whitespace
+		"[\n\r][\\s\n\r]*",               // whitespace
 		";(?:;;)?",                       // ;, ;;;
 		"\\.\\d*(?:[eE][-+]?\\d+)?",      // '.', floating point numbers starting with '.'
 		"\\/[=\\/\\*]?",                  // /, /=, //, /*
