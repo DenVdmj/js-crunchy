@@ -279,6 +279,7 @@ Crunchy.Tokenizer.prototype = {
 		} while(!token)
 
 		this._cursor += token.text.length;
+		// TODO: This doesn't work for tokens that span multiple lines.
 		token.lineno = this.lineno;
 		return token;
 	},
