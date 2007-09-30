@@ -274,7 +274,7 @@ Crunchy.Tokenizer.prototype = {
 			var c = match[2];
 			var token = (
 				this._getTokenizers["$" + c] ||
-				this._subTokenizers[c.charAt(0)] ||
+				this._subTokenizers[c.charCodeAt(0)] ||
 				this._getWhiteSpace)(this, c, scanOperand)
 		} while(!token)
 
@@ -309,7 +309,7 @@ Crunchy.Tokenizer.prototype = {
 ;(function() {
 	var CTp = Crunchy.Tokenizer.prototype;
 	var tokenizers = CTp._getTokenizers = {};
-	var subTokenizers = CTp._subTokenizers = {};
+	var subTokenizers = CTp._subTokenizers = [];
 
 	// The subTokenizers are single characters that identify tokens that
 	// can have several different forms (identifiers, numbers, etc.)
@@ -319,12 +319,12 @@ Crunchy.Tokenizer.prototype = {
 		case 2:
 			var chars = arguments[0], tokenizer = arguments[1];
 			for(var i=0, j=chars.length; i <=j; ++i)
-				subTokenizers[chars.charAt(i)] = tokenizer;
+				subTokenizers[chars.charCodeAt(i)] = tokenizer;
 			return;
 		case 3:
 			var from = arguments[0], to = arguments[1], tokenizer = arguments[2];
 			for(var i=from.charCodeAt(0), j=to.charCodeAt(0); i <=j; ++i)
-				subTokenizers[String.fromCharCode(i)] = tokenizer;
+				subTokenizers[i] = tokenizer;
 			return;
 		default:
 			throw "Incorrect number of arguments in addSubTokenizers."
