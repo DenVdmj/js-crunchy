@@ -91,7 +91,7 @@ Crunchy.webInterface = function() {
 
 	crunch.go = function() {
 		var src = input.value;
-		src = src.replace(/\r*\n/g, "\n").replace(/\r/g, "\n");
+		src = src.replace(/\r\n?/g, "\n");
 
 		var start = new Date();
 		var crunched = '';
