@@ -314,18 +314,29 @@ Crunchy.Tokenizer.prototype = {
 	// The subTokenizers are single characters that identify tokens that
 	// can have several different forms (identifiers, numbers, etc.)
 
-	function addSubTokenizers(from, to, tokenizer) {
-		for(var i=from.charCodeAt(0), j=to.charCodeAt(0); i <=j; ++i)
-			subTokenizers[String.fromCharCode(i)] = tokenizer;
+	function addSubTokenizers() {
+		switch(arguments.length) {
+		case 2:
+			var chars = arguments[0], tokenizer = arguments[1];
+			for(var i=0, j=chars.length; i <=j; ++i)
+				subTokenizers[chars.charAt(i)] = tokenizer;
+			return;
+		case 3:
+			var from = arguments[0], to = arguments[1], tokenizer = arguments[2];
+			for(var i=from.charCodeAt(0), j=to.charCodeAt(0); i <=j; ++i)
+				subTokenizers[String.fromCharCode(i)] = tokenizer;
+			return;
+		default:
+			throw "Incorrect number of arguments in addSubTokenizers."
+		}
 	}
+
 	addSubTokenizers("A", "Z", CTp._getIdentifier);
 	addSubTokenizers("a", "z", CTp._getIdentifier);
-	subTokenizers["_"] = CTp._getIdentifier;
-	subTokenizers["$"] = CTp._getIdentifier;
+	addSubTokenizers("_$", CTp._getIdentifier);
 	addSubTokenizers("0", "9", CTp._getNumber);
-	subTokenizers["."] = CTp._getDotNumber;
-	subTokenizers["'"] = CTp._getString;
-	subTokenizers['"'] = CTp._getString;
+	addSubTokenizers(".", CTp._getDotNumber);
+	addSubTokenizers("'\"", CTp._getString);
 
 	// tokenizers can take arbitrary identifiers - which might be members
 	// of object.prototype (or worse still __proto__). So need to add a prefix
