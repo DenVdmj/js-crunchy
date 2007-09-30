@@ -83,18 +83,25 @@ Crunchy.webInterface = function() {
 
 	// Memory leaktastic.
 	crunch.onclick = function() {
+		output.value = '';
+		compare.innerHTML = '<i>Working....</i>';
+
+		setTimeout(crunch.go, 0);
+	}
+
+	crunch.go = function() {
 		var src = input.value;
 		src = src.replace(/\r*\n/g, "\n").replace(/\r/g, "\n");
 
 		var start = new Date();
+		var crunched = '';
 		try {
-			var crunched = Crunchy.crunch(src);
+			crunched = Crunchy.crunch(src);
 		} catch(e) {
 			if(e.source) {
 				var lineno = (e.source.substring(0, e.cursor)
 						.match(/\r\n?|\n/g) || []).length + 1;
 				alert("Line " + lineno + ": " + e.toString());
-				crunched = '';
 			}
 			else {
 				throw e;
@@ -105,7 +112,7 @@ Crunchy.webInterface = function() {
 
 		output.value = crunched;
 		compare.innerHTML =
-			src.length + ' =&gt; ' + crunched.length + '(time = ' + (end - start) + ')';
+			src.length + ' =&gt; ' + crunched.length + '(time = ' + (end - start) + ')';		
 	}
 
 	return root;
