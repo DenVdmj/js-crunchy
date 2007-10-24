@@ -119,30 +119,30 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeStatement : function(s) {
-		if(this.invalidOp == "IF" && s.type == "IF" && !s.elsePart) {
+		if(this.invalidOp == IF && s.type == IF && !s.elsePart) {
 			this.writeBlock([s], true);
 			return;
 		}
 
 		switch(s.type) {
-		case "SCRIPT":
+		case SCRIPT:
 			this.writeStatements(s.body);
 			break;
-		case "FUNCTION":
+		case FUNCTION:
 			this.writeFunction(s);
 			break;
-		case "BLOCK":
+		case BLOCK:
 			// TODO: Strip out blocks when not needed.
 			// I think they're only needed when they
 			//   a) contain a function
 			//   b) are at the top level, or the top level of a function.
 			this.writeBlock(s.children, true);
 			break;
-		case "IF":
+		case IF:
 			this.writeWord('if');
 			this.writeBracketed(s.condition, '(', ')');
 			if(s.elsePart) {
-				this.addInvalidOp("IF", function() {
+				this.addInvalidOp(IF, function() {
 					this.writeBlock(s.thenPart, false);
 				});
 				this.seperateStatement();
@@ -153,20 +153,20 @@ Crunchy.Writer.prototype = {
 				this.writeBlock(s.thenPart, false);
 			}
 			break;
-		case "SWITCH":
+		case SWITCH:
 			this.writeWord('switch');
 			this.writeBracketed(s.discriminant, '(', ')');
 			this.write('{');
 			for(var i = 0; i < s.cases.length; ++i) {
 				if(i != 0) this.seperateStatement();
 				switch(s.cases[i].type) {
-				case "CASE":
+				case CASE:
 					this.writeWord('case');
 					this.writeExpression(s.cases[i].caseLabel);
 					this.write(':');
 					this.endStatement();
 					break;
-				case "DEFAULT":
+				case DEFAULT:
 					this.writeWord('default');
 					this.write(':');
 					this.endStatement();
@@ -181,10 +181,10 @@ Crunchy.Writer.prototype = {
 			this.write('}');
 			this.endStatement();
 			break;
-		case "FOR":
+		case FOR:
 			this.writeWord('for');
 			this.write('(');
-			if(s.setup) this.addInvalidOp('IN', function() {
+			if(s.setup) this.addInvalidOp(IN, function() {
 				this.writeExpressionOrVar(s.setup);
 			});
 			this.write(';');
@@ -194,10 +194,10 @@ Crunchy.Writer.prototype = {
 			this.write(')');
 			this.writeBlock(s.body);
 			break;
-		case "FOR_IN":
+		case FOR_IN:
 			this.writeWord('for');
 			this.write('(');
-			this.addInvalidOp('IN', function() {
+			this.addInvalidOp(IN, function() {
 				this.writeExpressionOrVar(s.iterator);
 			});
 			this.writeWord('in');
@@ -205,14 +205,14 @@ Crunchy.Writer.prototype = {
 			this.write(')');
 			this.writeBlock(s.body);
 			break;
-		case "WHILE":
+		case WHILE:
 			this.writeWord('while');
 			this.write('(');
 			this.writeExpression(s.condition);
 			this.write(')');
 			this.writeBlock(s.body);
 			break;
-		case "DO":
+		case DO:
 
 			this.writeWord('do');
 			// TODO: Curly brackers aren't needed for a do/while block but some
@@ -225,13 +225,13 @@ Crunchy.Writer.prototype = {
 			this.write(')');
 
 			break;
-		case "BREAK":
-		case "CONTINUE":
-		case "GOTO":
+		case BREAK:
+		case CONTINUE:
+		case GOTO:
 			this.writeWord(Crunchy.tokens[s.type]);
 			if(s.label) this.writeWord(s.label);
 			break;
-		case "TRY":
+		case TRY:
 			this.writeWord('try');
 			this.writeBlock(s.tryBlock, true);
 			for(var i = 0; i < s.catchClauses.length; ++i) {
@@ -252,29 +252,29 @@ Crunchy.Writer.prototype = {
 				this.writeBlock(s.finallyBlock, true);
 			}
 			break;
-		case "THROW":
+		case THROW:
 			this.writeWord('throw');
 			this.writeExpression(s.exception);
 			break;
-		case "RETURN":
+		case RETURN:
 			this.writeWord('return');
 			if(s.returnValue) this.writeExpression(s.returnValue);
 			break;
-		case "WITH":
+		case WITH:
 			this.writeWord('with');
 			this.write('(');
 			this.writeExpression(s.object);
 			this.write(')');
 			this.writeBlock(s.body);
 			break;
-		case "VAR":
-		case "CONST":
+		case VAR:
+		case CONST:
 			this.writeVar(s);
 			break;
-		case "DEBUGGER":
+		case DEBUGGER:
 			this.writeWord('debugger');
 			break;
-		case "SEMICOLON":
+		case SEMICOLON:
 			// Transformation is meant to remove empty semicolons.
 			if(!s.expression)
 				Crunchy.error("Empty semicolon");
@@ -283,12 +283,12 @@ Crunchy.Writer.prototype = {
 				this.writeExpression(s.expression);
 			}
 			break;
-		case "LABEL":
+		case LABEL:
 			this.writeWord(s.label);
 			this.write(':');
 			this.writeBlock(s.statement);
 			break;
-		case "DEBUG_SEMICOLON":
+		case DEBUG_SEMICOLON:
 			break;
 		default:
 			Crunchy.error("Unrecognized statement node type: " + Crunchy.tokenstr(s.type));
@@ -296,7 +296,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeExpressionOrVar : function(e) {
-		return e.type == "VAR" || e.type == "CONST" ? this.writeVar(e) :
+		return e.type == VAR || e.type == CONST ? this.writeVar(e) :
 			this.writeExpression(e);
 	},
 
@@ -308,12 +308,12 @@ Crunchy.Writer.prototype = {
 					if(i != 0) this.write(',');
 					// Note: Could just set the precedence to Crunchy.opPrecedence[COMMA] + 1.
 					// but I'd have to remeber to do that in OBJECT_INIT etc.
-					this.addInvalidOp("COMMA", function() {
+					this.addInvalidOp(COMMA, function() {
 						this.writeExpression(es[i]);
 					});
 				}
 				// Arrays that end with an EMPTY need a trailing comma.
-				if(es.length && es.top().type == "EMPTY") this.write(',');
+				if(es.length && es.top().type == EMPTY) this.write(',');
 			}
 			else {
 				this.writeExpression(es);
@@ -334,56 +334,56 @@ Crunchy.Writer.prototype = {
 
 		var op = Crunchy.tokens[e.type].toLowerCase();
 		switch(e.type) {
-		case "FUNCTION":
-		case "GETTER":
-		case "SETTER":
+		case FUNCTION:
+		case GETTER:
+		case SETTER:
 			this.writeFunction(e);
 			break;
-		case "EMPTY":
+		case EMPTY:
 			break;
-		case "IDENTIFIER":
-		case "MEMBER_IDENTIFIER":
+		case IDENTIFIER:
+		case MEMBER_IDENTIFIER:
 			this.writeWord(e.ref ? e.ref.name : e.value);
 			break;
-		case "NULL": case "THIS": case "TRUE": case "FALSE":
+		case NULL: case THIS: case TRUE: case FALSE:
 			this.writeWord(e.value);
 			break;
-		case "NUMBER":
+		case NUMBER:
 			this.writeNumber(e.value);
 			break;
-		case "REGEXP":
+		case REGEXP:
 			this.write(e.value);
 			break;
-		case "STRING":
+		case STRING:
 			//this.write(e.value);
 			this.write(Crunchy.stringEscape(e.value));
 			break;
-		case "CONDITIONAL":
+		case CONDITIONAL:
 			this.clearInvalidOps(function() {
-				if(precedence > Crunchy.opPrecedence["CONDITIONAL"])
+				if(precedence > Crunchy.opPrecedence[CONDITIONAL])
 					this.write('(');
 				this.writeExpression(e.children[0],
-						e.children[0].type == "ASSIGN" ? Crunchy.opPrecedence["ASSIGN"]+1 :
-						Crunchy.opPrecedence["CONDITIONAL"]);
+						e.children[0].type == ASSIGN ? Crunchy.opPrecedence[ASSIGN]+1 :
+						Crunchy.opPrecedence[CONDITIONAL]);
 				this.write('?');
-				this.writeExpression(e.children[1], Crunchy.opPrecedence["CONDITIONAL"]);
+				this.writeExpression(e.children[1], Crunchy.opPrecedence[CONDITIONAL]);
 				this.write(':');
-				this.writeExpression(e.children[2], Crunchy.opPrecedence["CONDITIONAL"]);
-				if(precedence > Crunchy.opPrecedence["CONDITIONAL"])
+				this.writeExpression(e.children[2], Crunchy.opPrecedence[CONDITIONAL]);
+				if(precedence > Crunchy.opPrecedence[CONDITIONAL])
 					this.write(')');
 			});
 			break;
-		case "NEW_WITH_ARGS":
-		case "CALL":
+		case NEW_WITH_ARGS:
+		case CALL:
 			// Nothing binds closer, so brackets aren't required here.
 			// I suppose if DOT could use expressions for the member
 			// eg. x.(y()). But it doesn't, that's meaningless.
-			if(e.type == "NEW_WITH_ARGS")
+			if(e.type == NEW_WITH_ARGS)
 				for(var i = 1; i < e.children.length; ++i) this.writeWord('new');
 
-			this.writeExpression(e.children[0], Crunchy.opPrecedence["DOT"]);
+			this.writeExpression(e.children[0], Crunchy.opPrecedence[DOT]);
 			for(var i = 1; i < e.children.length; ++i) {
-				if(e.children[i].type != "LIST") {
+				if(e.children[i].type != LIST) {
 					Crunchy.error("Suprise operand type for CALL.");
 					this.writeBracketed([], '(', ')');
 				}
@@ -392,18 +392,18 @@ Crunchy.Writer.prototype = {
 				}
 			}
 			break;
-		case "INDEX":
+		case INDEX:
 			// INDEX binds as for CALL
-			this.writeExpression(e.children[0], Crunchy.opPrecedence["DOT"]);
+			this.writeExpression(e.children[0], Crunchy.opPrecedence[DOT]);
 			for(var i = 1; i < e.children.length; ++i)
 				this.writeBracketed(e.children[i], '[', ']');
 			break;
-		case "OBJECT_INIT":
+		case OBJECT_INIT:
 			this.writeBracketed(e.children, '{', '}');
 			// TODO: A semi-colon is required after an object that ends a statement.
 			break;
-		case "PROPERTY_INIT": // TODO: Is this an expression?
-			if(e.children[0].type == "STRING" &&
+		case PROPERTY_INIT: // TODO: Is this an expression?
+			if(e.children[0].type == STRING &&
 				/^[a-zA-Z$_][a-zA-Z0-9$_]*$/.test(e.children[0].value) &&
 				!Crunchy.lookupKeyword(e.children[0].value))
 			{
@@ -417,11 +417,11 @@ Crunchy.Writer.prototype = {
 			// (this works for commas because invalidOp has been set - tenuous?)
 			this.writeExpression(e.children[1]);
 			break;
-		case "ARRAY_INIT":
+		case ARRAY_INIT:
 			this.writeBracketed(e.children, '[', ']');
 			// TODO: A semi-colon is required after an object that ends a statement.
 			break;
-		case "ASSIGN":
+		case ASSIGN:
 			if(e.children[0].assignOp)
 				op = Crunchy.tokens[e.children[0].assignOp] + op;
 			// TODO: How to deal with equal precedence?
@@ -435,12 +435,12 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "COMMA": case "OR": case "AND":
-		case "BITWISE_OR": case "BITWISE_XOR": case "BITWISE_AND":
-		case "EQ": case "NE": case "STRICT_EQ": case "STRICT_NE":
-		case "LT": case "LE": case "GE": case "GT":
-		case "LSH": case "RSH": case "URSH":
-		case "MUL": case "DIV": case "MOD":
+		case COMMA: case OR: case AND:
+		case BITWISE_OR: case BITWISE_XOR: case BITWISE_AND:
+		case EQ: case NE: case STRICT_EQ: case STRICT_NE:
+		case LT: case LE: case GE: case GT:
+		case LSH: case RSH: case URSH:
+		case MUL: case DIV: case MOD:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type]);
@@ -451,7 +451,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "IN": case "INSTANCEOF":
+		case IN: case INSTANCEOF:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type]);
@@ -462,9 +462,9 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "DOT":
-		case "PLUS":
-		case "MINUS":
+		case DOT:
+		case PLUS:
+		case MINUS:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			this.writeExpression(e.children[0], Crunchy.opPrecedence[e.type]);
@@ -475,7 +475,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "INCREMENT": case "DECREMENT":
+		case INCREMENT: case DECREMENT:
 			// The only operators that bind tighter are CALL/NEW/DOT
 			// which should never take the result of these operators,
 			// but just in case.... 
@@ -488,7 +488,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "UNARY_PLUS":
+		case UNARY_PLUS:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(')
 			this.writePlusMinus('+');
@@ -496,7 +496,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "UNARY_MINUS":
+		case UNARY_MINUS:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(')
 			this.writePlusMinus('-');
@@ -504,7 +504,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "NOT": case "BITWISE_NOT":
+		case NOT: case BITWISE_NOT:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			// I think there's no need to group prefix operators.
@@ -514,7 +514,7 @@ Crunchy.Writer.prototype = {
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write(')');
 			break;
-		case "NEW": case "DELETE": case "VOID": case "TYPEOF":
+		case NEW: case DELETE: case VOID: case TYPEOF:
 			if(precedence > Crunchy.opPrecedence[e.type])
 				this.write('(');
 			// I think there's no need to group prefix operators.
@@ -550,14 +550,14 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeVar : function(v) {
-		this.writeWord(v.type == "VAR" ? 'var' : 'const');
+		this.writeWord(v.type == VAR ? 'var' : 'const');
 		for(var i = 0; i < v.children.length; ++i) {
 			if(i!=0) this.write(',');
 			var x = v.children[i];
-			this.writeExpression(x, Crunchy.opPrecedence["ASSIGN"]+1);
+			this.writeExpression(x, Crunchy.opPrecedence[ASSIGN]+1);
 			if(x.initializer) {
 				this.write('=');
-				this.writeExpression(x.initializer, Crunchy.opPrecedence["ASSIGN"]);
+				this.writeExpression(x.initializer, Crunchy.opPrecedence[ASSIGN]);
 			}
 		}
 	},
@@ -598,8 +598,8 @@ Crunchy.Writer.prototype = {
 			//
 			// TODO: Should probably deal with these special cases somewhere better.
 			if(curliesRequired || statements.length > 1 ||
-					statements[0].type == "DO" ||
-					statements[0].type == "FUNCTION") {
+					statements[0].type == DO ||
+					statements[0].type == FUNCTION) {
 				// clearInvalidOps
 				// TODO: Why not in the other paths?
 				var old = this.invalidOp;

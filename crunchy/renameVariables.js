@@ -148,20 +148,20 @@
 			}
 
 			switch(node.type) {
-			case "SCRIPT":
+			case SCRIPT:
 				// This scope is the global scope, so fix variable names
 				node.scope = new this.Scope(x.currentScope, true);
 				x.ScopeList.push(node.scope);
 				node.scope.setVars(node);
 				break;
-			case "FUNCTION":
-			case "GETTER":
-			case "SETTER":
+			case FUNCTION:
+			case GETTER:
+			case SETTER:
 				node.scope = new this.Scope(x.currentScope, false);
 				x.ScopeList.push(node.scope);
 
 				// TODO: Is this right for STATEMENT_FORM?
-				if(node.type == "FUNCTION" && node.name) {
+				if(node.type == FUNCTION && node.name) {
 					if(node.functionForm == Crunchy.EXPRESSED_FORM) {
 						node.name2 = new this.ScopeVar(node.name, node.scope);
 						node.scope.decls.insert(node.name, node.name2);
@@ -174,10 +174,10 @@
 				node.params2 = node.scope.setParams(node.params);
 				node.scope.setVars(node);
 				break;
-			case "IDENTIFIER":
+			case IDENTIFIER:
 				node.ref = x.currentScope.refVar(node.value);
 				break;
-			case "CALL":
+			case CALL:
 				// Calls to eval can add variables or access variables in parent scopes.
 				// So need to fix the variable names in all those scopes.
 				//
@@ -186,12 +186,12 @@
 				//	   window.eval('var x = 1');
 				// Although, that's not strictly standard ECMAscript.
 
-				if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
+				if(node.children[0].type == IDENTIFIER && node.children[0].value == 'eval') {
 					for(var i = x.currentScope; i; i = i.parent)
 						i.setMutable();
 				}
 				break;
-			case "WITH":
+			case WITH:
 				node.scope = new this.Scope(x.currentScope, true);
 				this.findVariablesLoop(node.object, x);
 				x.ScopeList.push(node.scope);
@@ -200,7 +200,7 @@
 				this.findVariablesLoop(node.body, x);
 				x.currentScope = oldScope;
 				return;
-			case "CATCH":
+			case CATCH:
 				node.scope = new this.Scope(x.currentScope);
 				x.ScopeList.push(node.scope);
 				node.varRef = new this.ScopeVar(node.varName, node.scope);

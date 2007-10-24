@@ -52,7 +52,7 @@ Crunchy.Tokenizer = function(s, f, l) {
 
 Crunchy.Tokenizer.prototype = {
 	//done: function() {
-	//	return this.peek() == "END";
+	//	return this.peek() == END;
 	//},
 
 	token: function() {
@@ -130,14 +130,14 @@ Crunchy.Tokenizer.prototype = {
 	},
 
 	_getIdentifier : function(self, text) {
-		var token = self._newToken("IDENTIFIER", text)
+		var token = self._newToken(IDENTIFIER, text)
 		token.isProperty = true;
 		return token;
 	},
 
 	_getNumber : function(self, text) {
 		// TODO: Parse number.
-		return self._newToken("NUMBER", text);
+		return self._newToken(NUMBER, text);
 	},
 
 	_getDotNumber : function(self, text) {
@@ -145,12 +145,12 @@ Crunchy.Tokenizer.prototype = {
 			return self._getOp(self, text);
 		}
 		else {
-			return self._newToken("NUMBER", text, parseFloat(text));
+			return self._newToken(NUMBER, text, parseFloat(text));
 		}
 	},
 
 	_getString : function(self, text) {
-		//return self._newToken("STRING", text);
+		//return self._newToken(STRING, text);
 		var value = text.substr(1, text.length - 2)
 			.replace(/\\x[0-9a-fA-F][0-9a-fA-F]|\\.|\\\n|\\\r\n?/g, function(m) {
 				if(m.length == 4) {
@@ -171,7 +171,7 @@ Crunchy.Tokenizer.prototype = {
 					}
 				}
 			})
-		return self._newToken("STRING", text, value);
+		return self._newToken(STRING, text, value);
 		/**/
 	},
 
@@ -197,7 +197,7 @@ Crunchy.Tokenizer.prototype = {
 	_getSlash : function(self, text, scanOperand) {
 		if (scanOperand) {
 			var match = self._matchRegExp(/\/(\\.|\[[^\]]*\]|[^\/\[])+\/[a-z]*/g);
-			var x = self._newToken("REGEXP", match[0], match[0]);
+			var x = self._newToken(REGEXP, match[0], match[0]);
 		}
 		else {
 			var x = self._getOp(self, text);
@@ -208,7 +208,7 @@ Crunchy.Tokenizer.prototype = {
 
 	_getOp : function(self, text) {
 		if (Crunchy.assignOps[text]) {
-			var token = self._newToken("ASSIGN", text);
+			var token = self._newToken(ASSIGN, text);
 			token.assignOp = Crunchy.assignOps[text];
 			return token;
 		} else {
@@ -233,7 +233,7 @@ Crunchy.Tokenizer.prototype = {
 			self._cursor += pos;
 			if(pos < text.length) {
 				self.lineno += 1;
-				return self._newToken("NEWLINE", '\n');
+				return self._newToken(NEWLINE, '\n');
 			}
 		}
 		return undefined;
@@ -256,7 +256,7 @@ Crunchy.Tokenizer.prototype = {
 			--this._lookahead;
 			this._tokenIndex = (this._tokenIndex + 1) & 3;
 			var token = this._tokens[this._tokenIndex];
-			if (token.type != "NEWLINE" || this._scanNewlines) {
+			if (token.type != NEWLINE || this._scanNewlines) {
 				if(token.scanOperand != null && token.scanOperand != scanOperand)
 					console.info("Invalid scanOperand");
 				return token;
@@ -265,7 +265,7 @@ Crunchy.Tokenizer.prototype = {
 
 		do {
 			if(this._cursor >= this.source.length) {
-				var token = this._newToken("END");
+				var token = this._newToken(END);
 				return token;
 			}
 			// TODO: What happens if source ends with non-newline whitespace?
@@ -291,7 +291,7 @@ Crunchy.Tokenizer.prototype = {
 		do {
 			if (++this._lookahead == 4) throw "PANIC: too much lookahead!";
 			this._tokenIndex = (this._tokenIndex - 1) & 3;
-		} while(this._tokens[this._tokenIndex] && this._tokens[this._tokenIndex].type == "NEWLINE");
+		} while(this._tokens[this._tokenIndex] && this._tokens[this._tokenIndex].type == NEWLINE);
 	},
 
 	newSyntaxError: function (m) {
