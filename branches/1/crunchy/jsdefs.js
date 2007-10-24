@@ -227,17 +227,28 @@ for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 	var t = Crunchy.tokens[i];
 	if (/^[a-z]/.test(t)) {
 		var tt = t.toUpperCase();
-		keywords[t] = tt;
+		keywords[t] = i;
 	} else {
 		var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
+		Crunchy.opTypeNames[t] = i;
 	}
-	Crunchy.tokens[t] = tt;
+	eval("const " + tt + " = " + (i));
+	Crunchy.tokens[t] = i;
 	Crunchy.tokens[tt] = t;
 }
 
-// Messy....
-Crunchy.tokens["GETTER"] = "get";
-Crunchy.tokens["SETTER"] = "set";
+// TODO: Umm..... not sure why I need to do this!
+Crunchy.tokens[GETTER] = "get";
+Crunchy.tokens[SETTER] = "set";
+
+// TODO: Yuck.
+for(var i in Crunchy.opArity) {
+	Crunchy.opArity[window[i]] = Crunchy.opArity[i];
+}
+
+for(var i in Crunchy.opPrecedence) {
+	Crunchy.opPrecedence[window[i]] = Crunchy.opPrecedence[i];
+}
 
 Crunchy.lookupKeyword = function(keyword) {
 	return keywords[keyword] || false;
