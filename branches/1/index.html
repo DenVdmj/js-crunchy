@@ -1,0 +1,22 @@
+<html><head>
+
+<script src='support.js'></script>
+<script src='web-crunchy.js'></script>
+
+<script>
+if(document.getElementById) {
+	window.onload = function() {
+		var pos = document.getElementById("crunchy");
+		if(pos)
+			pos.parentNode.replaceChild(Crunchy.webInterface(), pos);
+	}
+}
+</script>
+
+</head>
+<body>
+	<div id="crunchy">
+		<p>You'll need to use a recent browser, with javascript turned on in order to use Crunchy.</p>
+	</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+mkdir -p build
+
+#time (rhino cruncher.js crunchy/crunchy.js > build/crunchy.js)
+#rhino tests.js
+#js tests.js
+#
+#rhino cruncher.js crunchy/web.js > build/crunchy-web.js
+
+cat crunch-stream.js crunchy/crunchy.js crunchy/common.js \
+    crunchy/jsdefs.js crunchy/tokenizer.js crunchy/jsparse.js \
+    crunchy/crunch.js crunchy/renameVariables.js crunchy/write.js |
+    grep -v "^[ \t]*load[ \t]*(" |
+    ./crunch-stream.js > build/crunch
+chmod +x build/crunch
+sudo install build/crunch /usr/local/bin
+
+#time (rhino cruncher.js cruncher.js > build/cruncher.js)
+#cd build
+#CLASSPATH=/usr/share/java/js-1.6.jar java org.mozilla.javascript.tools.jsc.Main -O 9 cruncher.js
+#cd ..
+#time (CLASSPATH=/usr/share/java/js-1.6.jar:build java cruncher cruncher.js > build/cruncher2.js)
