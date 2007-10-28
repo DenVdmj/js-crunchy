@@ -684,7 +684,10 @@ function ExpressionFunction(t, x, tt, state, operators, operands) {
 }
 
 function ExpressionOperand(t, x, tt, state, operators, operands) {
-	operands.push(new Node(t));
+	var n = new Node(t);
+	if(n.type == "IDENTIFIER")
+		n.name = n.value;
+	operands.push(n);
 	state.scanOperand = false;
 	return true;
 }
