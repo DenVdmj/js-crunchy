@@ -255,5 +255,7 @@ runTest("var x = function() { var a = 1; " +
 	"})(); " +
 	"return a; }()", "test(x == 4)" );
 
+runTest("var a = { 'get' : 1 }; var x = a.get;", "test(x === 1)");
+
 /**/
 print("Finished!");
