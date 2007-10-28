@@ -237,5 +237,7 @@ runTest("var x = /([\"'\\f\\b\\n\\t\\r])/gm", "test_result(x.toString())");
 runTest("var x = 0; do { ++x; } while(x < 2); ++x", "test(x == 3)");
 runTest("var x = 0; if(true) { do { x = 1 } while(false); } else { x = 2 }", "test(x == 1)");
 
+runTest("var x; const y = 0; with({y: 1}) { x = y }", "test(x === 1)");
+
 /**/
 print("Finished!");
