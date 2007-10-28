@@ -361,7 +361,7 @@ Crunchy.Tokenizer.prototype = {
 	//var regExpParts = [];
 
 	for(var i=0; i < Crunchy.tokens.length; ++i) {
-		var t = Crunchy.tokens[i];
+		var t = Crunchy.tokenList[i];
 		if(/^[a-z]/.test(t)) { // Keywords
 			// Note: no need to add keywords to the regular expression, as
 			// the matcher for identifiers will pick them up.

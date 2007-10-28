@@ -155,7 +155,7 @@ const
  * done by SpiderMonkey.
  */
 
-Crunchy.tokens = [
+Crunchy.tokenList = [
 	// End of source.
 	"END",
 
@@ -328,15 +328,16 @@ Crunchy.opArity = {
 Crunchy.contextuallyReservedKeywords = {}
 
 Crunchy.contextuallyReservedTokens.forEach(function(t) {
-	Crunchy.tokens.push(t);
+	Crunchy.tokenList.push(t);
 	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
 var keywords = {};
+Crunchy.tokens = [];
 
 // Define const END, etc., based on the token names.  Also map name to index.
-for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
-	var t = Crunchy.tokens[i];
+for (var i = 0, j = Crunchy.tokenList.length; i < j; i++) {
+	var t = Crunchy.tokenList[i];
 	if (/^[a-z]/.test(t)) {
 		var tt = t.toUpperCase();
 		var val = GLOBAL[tt];
@@ -346,6 +347,7 @@ for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 		var val = GLOBAL[tt];
 		Crunchy.opTypeNames[t] = val;
 	}
+	Crunchy.tokens[val] = t;
 	Crunchy.tokens[t] = val;
 	Crunchy.tokens[tt] = t;
 }
