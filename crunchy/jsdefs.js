@@ -352,7 +352,8 @@ for (var i = 0, j = Crunchy.tokenList.length; i < j; i++) {
 	Crunchy.tokens[tt] = t;
 }
 
-// TODO: Umm..... not sure why I need to do this!
+// TODO: These aren't stored as keywords - need to improve use of contextually
+// reserved keywords and all that.
 Crunchy.tokens[GETTER] = "get";
 Crunchy.tokens[SETTER] = "set";
 
