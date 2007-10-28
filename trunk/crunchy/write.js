@@ -342,6 +342,11 @@ Crunchy.Writer.prototype = {
 		case "EMPTY":
 			break;
 		case "IDENTIFIER":
+			if(e.constValue) {
+				this.writeExpression(e.constValue, precedence);
+				break;
+			}
+			// Fall through...
 		case "MEMBER_IDENTIFIER":
 			this.writeWord(e.ref ? e.ref.name : e.value);
 			break;
