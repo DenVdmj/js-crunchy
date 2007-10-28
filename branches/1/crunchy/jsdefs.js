@@ -35,7 +35,117 @@
  * ***** END LICENSE BLOCK ***** */
 
 const GLOBAL = function() { return this }();
-
+const
+	END = 0,
+	NEWLINE = 1,
+	SEMICOLON = 2,
+	DEBUG_SEMICOLON = 3,
+	COMMA = 4,
+	ASSIGN = 5,
+	HOOK = 6,
+	COLON = 7,
+	CONDITIONAL = 8,
+	OR = 9,
+	AND = 10,
+	BITWISE_OR = 11,
+	BITWISE_XOR = 12,
+	BITWISE_AND = 13,
+	EQ = 14,
+	NE = 15,
+	STRICT_EQ = 16,
+	STRICT_NE = 17,
+	LT = 18,
+	LE = 19,
+	GE = 20,
+	GT = 21,
+	LSH = 22,
+	RSH = 23,
+	URSH = 24,
+	PLUS = 25,
+	MINUS = 26,
+	MUL = 27,
+	DIV = 28,
+	MOD = 29,
+	NOT = 30,
+	BITWISE_NOT = 31,
+	UNARY_PLUS = 32,
+	UNARY_MINUS = 33,
+	INCREMENT = 34,
+	DECREMENT = 35,
+	DOT = 36,
+	LEFT_BRACKET = 37,
+	RIGHT_BRACKET = 38,
+	LEFT_CURLY = 39,
+	RIGHT_CURLY = 40,
+	LEFT_PAREN = 41,
+	RIGHT_PAREN = 42,
+	SCRIPT = 43,
+	BLOCK = 44,
+	LABEL = 45,
+	FOR_IN = 46,
+	CALL = 47,
+	NEW_WITH_ARGS = 48,
+	INDEX = 49,
+	ARRAY_INIT = 50,
+	OBJECT_INIT = 51,
+	PROPERTY_INIT = 52,
+	GETTER = 53,
+	SETTER = 54,
+	GROUP = 55,
+	LIST = 56,
+	IDENTIFIER = 57,
+	MEMBER_IDENTIFIER = 58,
+	NUMBER = 59,
+	STRING = 60,
+	REGEXP = 61,
+	EMPTY = 62,
+	BREAK = 63,
+	CASE = 64,
+	CATCH = 65,
+	CONTINUE = 66,
+	DEFAULT = 67,
+	DELETE = 68,
+	DO = 69,
+	ELSE = 70,
+	FINALLY = 71,
+	FOR = 72,
+	FUNCTION = 73,
+	IF = 74,
+	IN = 75,
+	INSTANCEOF = 76,
+	NEW = 77,
+	RETURN = 78,
+	SWITCH = 79,
+	THIS = 80,
+	THROW = 81,
+	TRY = 82,
+	TYPEOF = 83,
+	VAR = 84,
+	VOID = 85,
+	WHILE = 86,
+	WITH = 87,
+	TRUE = 88,
+	FALSE = 89,
+	NULL = 90,
+	CLASS = 91,
+	ENUM = 92,
+	EXTENDS = 93,
+	SUPER = 94,
+	CONST = 95,
+	DEBUGGER = 96,
+	DOUBLE = 97,
+	FINAL = 98,
+	IMPLEMENTS = 99,
+	IMPORT = 100,
+	INT = 101,
+	INTERFACE = 102,
+	NATIVE = 103,
+	PACKAGE = 104,
+	PRIVATE = 105,
+	PROTECTED = 106,
+	PUBLIC = 107,
+	STATIC = 108,
+	GOTO = 109;
 /*
  * Narcissus - JS implemented in JS.
  *
@@ -229,13 +339,14 @@ for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 	var t = Crunchy.tokens[i];
 	if (/^[a-z]/.test(t)) {
 		var tt = t.toUpperCase();
-		keywords[t] = i;
+		var val = GLOBAL[tt];
+		keywords[t] = val;
 	} else {
 		var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
-		Crunchy.opTypeNames[t] = i;
+		var val = GLOBAL[tt];
+		Crunchy.opTypeNames[t] = val;
 	}
-	eval("const " + tt + " = " + (i));
-	Crunchy.tokens[t] = i;
+	Crunchy.tokens[t] = val;
 	Crunchy.tokens[tt] = t;
 }
 
