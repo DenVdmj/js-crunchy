@@ -326,9 +326,7 @@ Crunchy.Writer.prototype = {
 		precedence = precedence || 0;
 
 		if(this.invalidOp == e.type) {
-			this.clearInvalidOps(function() {
-				this.writeBracketed(e, '(', ')');
-			});
+			this.writeBracketed(e, '(', ')');
 			return;
 		}
 
