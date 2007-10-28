@@ -111,8 +111,7 @@
 
 		refVar : function(node) {
 			// TODO: Yuck.
-			var name = node.name ? node.name : node.value;
-			var x = this.decls.get(name) || this.refs.get(name);
+			var x = this.decls.get(node.name) || this.refs.get(node.name);
 			if(!x) {
 				if (this.parent) {
 					x = this.parent.refVar(node);
@@ -121,7 +120,7 @@
 					node.unclearMatch = node.unclearMatch  || this.fixVariableNames;
 				}
 				else {
-					x = this.decls.insert(name, new Crunchy.renameVariables.ScopeVar(name, this));
+					x = this.decls.insert(node.name, new Crunchy.renameVariables.ScopeVar(node.name, this));
 				}
 			}
 			return x;
