@@ -239,5 +239,21 @@ runTest("var x = 0; if(true) { do { x = 1 } while(false); } else { x = 2 }", "te
 
 runTest("var x; const y = 0; with({y: 1}) { x = y }", "test(x === 1)");
 
+// If these tests fail it might mean that the scope list is in the wrong order
+// in renameVariables.js
+
+runTest("var x = function() { var a = 1; " +
+	"(function() { var b = 2; " +
+		"(function() { a = 3; })(); " +
+		"(function() { b = 4; })(); " +
+	"})(); " +
+	"return a; }()", "test(x == 3)" );
+runTest("var x = function() { var a = 1; " +
+	"(function() { var b = 2; " +
+		"(function() { b = 3; })(); " +
+		"(function() { a = 4; })(); " +
+	"})(); " +
+	"return a; }()", "test(x == 4)" );
+
 /**/
 print("Finished!");

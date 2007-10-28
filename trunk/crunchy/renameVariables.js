@@ -135,6 +135,8 @@
 	// Identify the variables, and which can be changed.
 
 	Crunchy.renameVariables.findVariables = function(root) {
+		// Note: The rename algorithm relies on ScopeList being in
+		// prefix order.
 		root.scopeList = [];
 		this.findVariablesLoop(root, {
 			currentScope : null,
