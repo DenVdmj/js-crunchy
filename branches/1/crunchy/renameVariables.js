@@ -193,7 +193,7 @@
 				if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
 						node.ref.node != node &&
 						node.ref.node.initializer &&
-						node.ref.node.initializer.type == "NUMBER") {
+						node.ref.node.initializer.type == NUMBER) {
 					node.constValue = node.ref.node.initializer;
 				}
 				break;
