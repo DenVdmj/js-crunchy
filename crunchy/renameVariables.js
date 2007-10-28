@@ -72,7 +72,7 @@
 			Crunchy.error("Creating ScopeVar without scope.");
 		this.name = name;
 		this.scopes = [scope];
-		this.fixed = scope.fixVariableNames;
+		this.stopRename = scope.fixVariableNames;
 		if(node) this.node = node;
 	};
 
@@ -109,13 +109,16 @@
 			return result;
 		},
 
-		refVar : function(name) {
+		refVar : function(node) {
+			// TODO: Yuck.
+			var name = node.name ? node.name : node.value;
 			var x = this.decls.get(name) || this.refs.get(name);
 			if(!x) {
 				if (this.parent) {
-					x = this.refs.insert(name, this.parent.refVar(name));
+					x = this.parent.refVar(node);
 					x.scopes.push(this);
-					x.fixed = x.fixed || this.fixVariableNames;
+					x.stopRename = x.stopRename || this.fixVariableNames;
+					node.unclearMatch = node.unclearMatch  || this.fixVariableNames;
 				}
 				else {
 					x = this.decls.insert(name, new Crunchy.renameVariables.ScopeVar(name, this));
@@ -125,8 +128,8 @@
 		},
 
 		setMutable : function() {
-			this.decls.forEach(function(name, v) { v.fixed = true })
-			this.refs.forEach(function(name, v) { v.fixed = true })
+			this.decls.forEach(function(name, v) { v.stopRename = true })
+			this.refs.forEach(function(name, v) { v.stopRename = true })
 		}
 	};
 
@@ -168,7 +171,7 @@
 						node.scope.decls.insert(node.name, node.name2);
 					}
 					else {
-						node.name2 = x.currentScope.refVar(node.name);
+						node.name2 = x.currentScope.refVar(node);
 					}
 				}
 
@@ -176,20 +179,17 @@
 				node.scope.setVars(node);
 				break;
 			case "IDENTIFIER":
-				node.ref = x.currentScope.refVar(node.value);
+				node.ref = x.currentScope.refVar(node);
 
 				// TODO #1: This probably shouldn't be here, should separate
 				//   the variable lookup stuff from the renaming stuff.
 				// TODO #2: I should really change the node, not just set a
 				//   value.
-				// TODO #3: Often names are fixed, but it's still okay to
-				//   substitute the value (eg. the global scope). Need to stop
-				//   overload 'fixed' with other meanings.
 				// TODO #4: 'node.ref.node != node' is a horrible hack to avoid
 				//   changing the actual const statement. Surely I can do
 				//   better..
 
-				if(node.ref.node && !node.ref.fixed && node.ref.node.readOnly &&
+				if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
 						node.ref.node != node &&
 						node.ref.node.initializer &&
 						node.ref.node.initializer.type == "NUMBER") {
@@ -292,7 +292,7 @@
 				// are going to be matched with the wrong place. 'arguments' should
 				// be caught in 'refVar', possibly by adding arguments to all function
 				// scopes.
-				if(v.fixed || v.name === "arguments") {
+				if(v.fixed || v.stopRename || v.name === "arguments") {
 					fixed.insert(name, v);
 				}
 				// Not bothering with 'special' names for now. Maybe deal with them optionally
