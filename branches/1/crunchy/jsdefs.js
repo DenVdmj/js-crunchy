@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+const GLOBAL = function() { return this }();
+
 /*
  * Narcissus - JS implemented in JS.
  *
@@ -243,11 +245,11 @@ Crunchy.tokens[SETTER] = "set";
 
 // TODO: Yuck.
 for(var i in Crunchy.opArity) {
-	Crunchy.opArity[window[i]] = Crunchy.opArity[i];
+	Crunchy.opArity[GLOBAL[i]] = Crunchy.opArity[i];
 }
 
 for(var i in Crunchy.opPrecedence) {
-	Crunchy.opPrecedence[window[i]] = Crunchy.opPrecedence[i];
+	Crunchy.opPrecedence[GLOBAL[i]] = Crunchy.opPrecedence[i];
 }
 
 Crunchy.lookupKeyword = function(keyword) {
