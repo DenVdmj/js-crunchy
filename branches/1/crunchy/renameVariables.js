@@ -66,13 +66,14 @@
 
 	// Scopes
 
-	Crunchy.renameVariables.ScopeVar = function(name, scope) {
+	Crunchy.renameVariables.ScopeVar = function(name, scope, node) {
 		//if(!(scope instanceof Scope))
 		if(!scope)
 			Crunchy.error("Creating ScopeVar without scope.");
 		this.name = name;
 		this.scopes = [scope];
-		this.fixed = scope.fixVariableNames;
+		this.stopRename = scope.fixVariableNames;
+		if(node) this.node = node;
 	};
 
 	Crunchy.renameVariables.Scope = function(parent, fixVariableNames) {
@@ -90,7 +91,7 @@
 			function addVar(node) {
 				if(!decls.contains(node.name)) {
 					decls.insert(node.name,
-						new Crunchy.renameVariables.ScopeVar(node.name, scope));
+						new Crunchy.renameVariables.ScopeVar(node.name, scope, node));
 				}
 			}
 
@@ -108,30 +109,34 @@
 			return result;
 		},
 
-		refVar : function(name) {
-			var x = this.decls.get(name) || this.refs.get(name);
+		refVar : function(node) {
+			// TODO: Yuck.
+			var x = this.decls.get(node.name) || this.refs.get(node.name);
 			if(!x) {
 				if (this.parent) {
-					x = this.refs.insert(name, this.parent.refVar(name));
+					x = this.parent.refVar(node);
 					x.scopes.push(this);
-					x.fixed = x.fixed || this.fixVariableNames;
+					x.stopRename = x.stopRename || this.fixVariableNames;
+					node.unclearMatch = node.unclearMatch  || this.fixVariableNames;
 				}
 				else {
-					x = this.decls.insert(name, new Crunchy.renameVariables.ScopeVar(name, this));
+					x = this.decls.insert(node.name, new Crunchy.renameVariables.ScopeVar(node.name, this));
 				}
 			}
 			return x;
 		},
 
 		setMutable : function() {
-			this.decls.forEach(function(name, v) { v.fixed = true })
-			this.refs.forEach(function(name, v) { v.fixed = true })
+			this.decls.forEach(function(name, v) { v.stopRename = true })
+			this.refs.forEach(function(name, v) { v.stopRename = true })
 		}
 	};
 
 	// Identify the variables, and which can be changed.
 
 	Crunchy.renameVariables.findVariables = function(root) {
+		// Note: The rename algorithm relies on ScopeList being in
+		// prefix order.
 		root.scopeList = [];
 		this.findVariablesLoop(root, {
 			currentScope : null,
@@ -167,7 +172,7 @@
 						node.scope.decls.insert(node.name, node.name2);
 					}
 					else {
-						node.name2 = x.currentScope.refVar(node.name);
+						node.name2 = x.currentScope.refVar(node);
 					}
 				}
 
@@ -175,7 +180,22 @@
 				node.scope.setVars(node);
 				break;
 			case IDENTIFIER:
-				node.ref = x.currentScope.refVar(node.value);
+				node.ref = x.currentScope.refVar(node);
+
+				// TODO #1: This probably shouldn't be here, should separate
+				//   the variable lookup stuff from the renaming stuff.
+				// TODO #2: I should really change the node, not just set a
+				//   value.
+				// TODO #4: 'node.ref.node != node' is a horrible hack to avoid
+				//   changing the actual const statement. Surely I can do
+				//   better..
+
+				if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
+						node.ref.node != node &&
+						node.ref.node.initializer &&
+						node.ref.node.initializer.type == "NUMBER") {
+					node.constValue = node.ref.node.initializer;
+				}
 				break;
 			case CALL:
 				// Calls to eval can add variables or access variables in parent scopes.
@@ -273,7 +293,7 @@
 				// are going to be matched with the wrong place. 'arguments' should
 				// be caught in 'refVar', possibly by adding arguments to all function
 				// scopes.
-				if(v.fixed || v.name === "arguments") {
+				if(v.fixed || v.stopRename || v.name === "arguments") {
 					fixed.insert(name, v);
 				}
 				// Not bothering with 'special' names for now. Maybe deal with them optionally
