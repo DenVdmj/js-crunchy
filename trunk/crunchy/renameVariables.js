@@ -110,7 +110,6 @@
 		},
 
 		refVar : function(node) {
-			// TODO: Yuck.
 			var x = this.decls.get(node.name) || this.refs.get(node.name);
 			if(!x) {
 				if (this.parent) {
