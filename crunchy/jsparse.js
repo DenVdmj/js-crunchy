@@ -197,63 +197,62 @@ Crunchy.Parser = function() {
 Crunchy.Parser.prototype = {
 	parse: function(s, f, l) {
 		var t = new Crunchy.Tokenizer(s, f, l);
-		var n = Script(t);
+		var n = this.Script(t);
 		if (t.peekOperand().type != "END")
 			throw t.newSyntaxError("Syntax error");
 		return n;
-	}
-}
+	},
 
-function Script(t) {
+Script: function(t) {
 	var n = new Node(t, "SCRIPT");
-	n.setBody(ParseCompilerContext(t, n, false));
+	n.setBody(this.ParseCompilerContext(t, n, false));
 	return n;
-}
+},
 
-function ParseCompilerContext(t, n, inFunction) {
+ParseCompilerContext: function(t, n, inFunction) {
 	var x = new CompilerContext(inFunction);
-	var nodes = Statements(t, x);
+	var nodes = this.Statements(t, x);
 	n.funDecls = x.funDecls;
 	n.varDecls = x.varDecls;
 	return nodes;
-}
+},
 
-function Statements(t, x) {
+Statements: function(t, x) {
 	var tt,nodes = [];
 	while ((tt = t.peekOperand().type) != "END" && tt != "RIGHT_CURLY")
-		nodes = nodes.concat(Statement(t, x));
+		nodes = nodes.concat(this.Statement(t, x));
 	return nodes;
-}
+},
 
-function Block(t, x) {
+Block: function(t, x) {
 	if(t.peekOperand().type != "LEFT_CURLY")
 		throw t.newSyntaxError("Code block expected.");
-	return OptionalBlock(t, x);
-}
+	return this.OptionalBlock(t, x);
+},
 
-function OptionalBlock(t, x) {
+OptionalBlock: function(t, x) {
 	++x.nestedLevel;
-	var s = Statement(t, x);
+	var s = this.Statement(t, x);
 	--x.nestedLevel;
 	return s;
-}
+},
 
-function Statement(t, x) {
+Statement: function(t, x) {
 	// TODO: Here we might have previously called 'peekOperator', and
 	// auto-inserted a semi-colon.
-	return (StatementMethods[t.getOperand()] || StatementMethods['default'])(t, x);
-}
+	return (this.StatementMethods[t.getOperand()] || this.StatementMethods['default']).call(this, t, x);
+},
 
-var StatementMethods = {
+StatementMethods: {
 	"FUNCTION" : function(t, x) {
-		return [FunctionDefinition(t, x, true,
+		return [this.FunctionDefinition(t, x, true,
 				x.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
 
 	},
 
 	"LEFT_CURLY" : function(t, x) {
 		++x.nestedLevel;
-		var children = Statements(t, x);
+		var children = this.Statements(t, x);
 		--x.nestedLevel;
 		t.mustMatchOperator("RIGHT_CURLY");
 		if(x.nestedLevel == 0) {
@@ -268,9 +267,9 @@ var StatementMethods = {
 
 	"IF" : function(t, x) {
 		var n = new Node(t, "IF");
-		n.setCondition(ParenExpression(t, x));
-		n.setThenPart(OptionalBlock(t, x));
-		n.setElsePart(t.matchOperator("ELSE") ? OptionalBlock(t, x) : null);
+		n.setCondition(this.ParenExpression(t, x));
+		n.setThenPart(this.OptionalBlock(t, x));
+		n.setElsePart(t.matchOperator("ELSE") ? this.OptionalBlock(t, x) : null);
 		return [n];
 	},
 
@@ -279,7 +278,7 @@ var StatementMethods = {
 		var n = new Node(t);
 
 		t.mustMatchOperator("LEFT_PAREN");
-		n.setDiscriminant(Expression(t, x));
+		n.setDiscriminant(this.Expression(t, x));
 		t.mustMatchOperator("RIGHT_PAREN");
 
 		var cases = [];
@@ -288,7 +287,7 @@ var StatementMethods = {
 		while ((tt = t.getOperand()) != "RIGHT_CURLY") {			
 			var n2 = new Node(t);
 			if(tt == "CASE") {
-				n2.setCaseLabel(Expression(t, x, "COLON"));
+				n2.setCaseLabel(this.Expression(t, x, "COLON"));
 			}
 			else if(tt != "DEFAULT") {
 				throw t.newSyntaxError("Invalid switch case");
@@ -296,7 +295,7 @@ var StatementMethods = {
 			t.mustMatchOperand("COLON");
 			var statements = [];
 			while ((tt=t.peekOperand().type) != "CASE" && tt != "DEFAULT" && tt != "RIGHT_CURLY")
-				statements = statements.concat(Statement(t, x));
+				statements = statements.concat(this.Statement(t, x));
 			n2.setStatements(statements);
 			cases.push(n2);
 		}
@@ -316,9 +315,9 @@ var StatementMethods = {
 			x.inForLoopInit = true;
 			if (tt == "VAR" || tt == "CONST") {
 				t.getOperand();
-				n2 = Variables(t, x);
+				n2 = this.Variables(t, x);
 			} else {
-				n2 = Expression(t, x);
+				n2 = this.Expression(t, x);
 			}
 			x.inForLoopInit = false;
 		}
@@ -335,25 +334,25 @@ var StatementMethods = {
 			}
 
 			n.setIterator(n2);
-			n.setObject(Expression(t, x));
+			n.setObject(this.Expression(t, x));
 		} else {
 			n.setType("FOR");
 			n.setSetup(n2 || null);
 			t.mustMatchOperator("SEMICOLON");
-			n.setCondition((t.peekOperand().type == "SEMICOLON") ? null : Expression(t, x));
+			n.setCondition((t.peekOperand().type == "SEMICOLON") ? null : this.Expression(t, x));
 			t.mustMatchOperator("SEMICOLON");
-			n.setUpdate((t.peekOperand().type == "RIGHT_PAREN") ? null : Expression(t, x));
+			n.setUpdate((t.peekOperand().type == "RIGHT_PAREN") ? null : this.Expression(t, x));
 		}
 		t.mustMatchOperator("RIGHT_PAREN");
-		n.setBody(OptionalBlock(t, x));
+		n.setBody(this.OptionalBlock(t, x));
 		return [n];
 	},
 
 	"WHILE" : function(t, x) {
 		var n = new Node(t);
 		n.isLoop = true;
-		n.setCondition(ParenExpression(t, x));
-		n.setBody(OptionalBlock(t, x));
+		n.setCondition(this.ParenExpression(t, x));
+		n.setBody(this.OptionalBlock(t, x));
 		return [n];
 
 	},
@@ -362,14 +361,14 @@ var StatementMethods = {
 		var n = new Node(t);
 		n.isLoop = true;
 		// TODO: I forget if the block really is optional.
-		n.setBody(OptionalBlock(t, x));
+		n.setBody(this.OptionalBlock(t, x));
 		t.mustMatchOperand("WHILE");
-		n.setCondition(ParenExpression(t, x));
+		n.setCondition(this.ParenExpression(t, x));
 
 		// Several javascript implementations allow automatic semicolon
 		// insertion without a newline after do-while.
 		// See http://bugzilla.mozilla.org/show_bug.cgi?id=238945.
-		if (x.ecmaStrictMode) StatementEnd(t,x); 
+		if (x.ecmaStrictMode) this.StatementEnd(t,x); 
 		else t.matchOperand("SEMICOLON");
 		return [n];
 
@@ -382,7 +381,7 @@ var StatementMethods = {
 			t.getOperand();
 			n.label = t.token().value;
 		}
-		StatementEnd(t,x);
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
@@ -392,13 +391,13 @@ var StatementMethods = {
 			t.getOperand();
 			n.label = t.token().value;
 		}
-		StatementEnd(t,x);
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
 	"TRY" : function(t, x) {
 		var n = new Node(t);
-		n.setTryBlock(Block(t, x));
+		n.setTryBlock(this.Block(t, x));
 		var catchClauses = [];
 		while (t.matchOperand("CATCH")) {
 			var n2 = new Node(t);
@@ -410,12 +409,12 @@ var StatementMethods = {
 					throw t.newSyntaxError("Illegal catch guard");
 				if (catchClauses.length && !catchClauses.top().guard)
 					throw t.newSyntaxError("Guarded catch after unguarded");
-				n2.setGuard(Expression(t, x));
+				n2.setGuard(this.Expression(t, x));
 			} else {
 				n2.setGuard(null);
 			}
 			t.mustMatchOperator("RIGHT_PAREN");
-			n2.setBlock(Block(t, x));
+			n2.setBlock(this.Block(t, x));
 			catchClauses.push(n2);
 		}
 		n.setCatchClauses(catchClauses);
@@ -438,8 +437,8 @@ var StatementMethods = {
 
 	"THROW" : function(t, x) {
 		var n = new Node(t);
-		n.setException(Expression(t, x));
-		StatementEnd(t,x);
+		n.setException(this.Expression(t, x));
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
@@ -449,35 +448,35 @@ var StatementMethods = {
 		var n = new Node(t);
 		var tt = t.peekOnSameLine().type;
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
-			n.setReturnValue(Expression(t, x));
-		StatementEnd(t,x);
+			n.setReturnValue(this.Expression(t, x));
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
 	"WITH" : function(t, x) {
 		var n = new Node(t);
-		n.setObject(ParenExpression(t, x));
+		n.setObject(this.ParenExpression(t, x));
 		// TODO: I forget if with statement requires curlies.
-		n.setBody(OptionalBlock(t, x));
+		n.setBody(this.OptionalBlock(t, x));
 		return [n];
 
 	},
 
 	"VAR" : function(t, x) {
-		var n = Variables(t, x);
-		StatementEnd(t,x);
+		var n = this.Variables(t, x);
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
 	"CONST" : function(t, x) {
-		var n = Variables(t, x);
-		StatementEnd(t,x);
+		var n = this.Variables(t, x);
+		this.StatementEnd(t,x);
 		return [n];
 	},
 
 	"DEBUGGER" : function(t, x) {
 		var n = new Node(t);
-		StatementEnd(t,x);
+		this.StatementEnd(t,x);
 		return [n];
 	},
 	
@@ -491,7 +490,7 @@ var StatementMethods = {
 
 	"DEBUG_SEMICOLON" : function(t, x) {
 		var n = new Node(t);
-		n.setStatement(Statement(t, x));
+		n.setStatement(this.Statement(t, x));
 		return [n];
 	},
 
@@ -502,14 +501,14 @@ var StatementMethods = {
 			t.getOperand();
 			var n = new Node(t, "LABEL");
 			n.label = label;
-			n.setStatement(Statement(t, x));
+			n.setStatement(this.Statement(t, x));
 			return [n];
 		}
 		else {
 			var n = new Node(t, "SEMICOLON");
 			t.unget();
-			n.setExpression(Expression(t, x));
-			StatementEnd(t,x);
+			n.setExpression(this.Expression(t, x));
+			this.StatementEnd(t,x);
 			return [n];
 		}
 	},
@@ -526,25 +525,25 @@ var StatementMethods = {
 			var n = new Node(t);
 			t.getOperand();
 			n.label = t.token().value;
-			StatementEnd(t,x);
+			this.StatementEnd(t,x);
 			return [n];
 		}
 		else {
-			return StatementMethods['default'](t, x);
+			return this.StatementMethods['default'].call(this,t, x);
 		}
 	}
-}
+},
 
-function StatementEnd(t, x) {
+StatementEnd: function(t, x) {
 	if (t.lineno == t.token().lineno) {
 		tt = t.peekOnSameLine().type;
 		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 			throw t.newSyntaxError("Missing ; before statement");
 	}
 	t.matchOperand("SEMICOLON");
-}
+},
 
-function FunctionDefinition(t, x, requireName, functionForm) {
+FunctionDefinition: function(t, x, requireName, functionForm) {
 	var token = t.token();
 
 	if(token.type == "FUNCTION") var type = "FUNCTION";
@@ -577,7 +576,7 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	f.params = params;
 
 	t.mustMatchOperator("LEFT_CURLY");
-	f.setBody(ParseCompilerContext(t, f, true));
+	f.setBody(this.ParseCompilerContext(t, f, true));
 	t.mustMatchOperand("RIGHT_CURLY");
 
 	f.functionForm = functionForm;
@@ -594,9 +593,9 @@ function FunctionDefinition(t, x, requireName, functionForm) {
 	if (functionForm == Crunchy.DECLARED_FORM)
 		x.funDecls.push(f);
 	return f;
-}
+},
 
-function Variables(t, x) {
+Variables: function(t, x) {
 	var n = new OperatorNode(t);
 	do {
 		// TODO: isProperty
@@ -606,23 +605,23 @@ function Variables(t, x) {
 		if (t.matchOperator("ASSIGN")) {
 			if (t.token().assignOp)
 				throw t.newSyntaxError("Invalid variable initialization");
-			n2.setInitializer(Expression(t, x, "COMMA"));
+			n2.setInitializer(this.Expression(t, x, "COMMA"));
 		}
 		n2.readOnly = (n.type == "CONST");
 		n.pushOperand(n2);
 		x.varDecls.push(n2);
 	} while (t.matchOperator("COMMA"));
 	return n;
-}
+},
 
-function ParenExpression(t, x) {
+ParenExpression: function(t, x) {
 	t.mustMatchOperator("LEFT_PAREN");
-	var n = Expression(t, x);
+	var n = this.Expression(t, x);
 	t.mustMatchOperator("RIGHT_PAREN");
 	return n;
-}
+},
 
-function Expression(t, x, stop) {
+Expression: function(t, x, stop) {
 	var tt, operators = [], operands = [];
 	var state = { bl : x.bracketLevel, cl : x.curlyLevel, pl : x.parenLevel, hl : x.hookLevel, scanOperand : true };
 
@@ -639,8 +638,8 @@ function Expression(t, x, stop) {
 			break;
 		}
 
-		var f = (state.scanOperand ? OperandMethods : OperatorMethods)[tt];
-	} while(f && f(t, x, tt, state, operators, operands));
+		var f = (state.scanOperand ? this.OperandMethods : this.OperatorMethods)[tt];
+	} while(f && f.call(this, t, x, tt, state, operators, operands));
 
 	if (x.hookLevel != state.hl)
 		throw t.newSyntaxError("Missing : after ?");
@@ -654,34 +653,34 @@ function Expression(t, x, stop) {
 	// Resume default mode, scanning for operands, not operators.
 	t.unget();
 	while (operators.length)
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 	return operands.pop();
-}
+},
 
 // Operator Methods
 
-function ExpressionUnaryOperator(t, x, tt, state, operators, operands) {
+ExpressionUnaryOperator: function(t, x, tt, state, operators, operands) {
 	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
 	operators.push(new OperatorNode(t, tt));
 	return true;
-}
+},
 
-function ExpressionFunction(t, x, tt, state, operators, operands) {
-	operands.push(FunctionDefinition(t, x, false, Crunchy.EXPRESSED_FORM));
+ExpressionFunction: function(t, x, tt, state, operators, operands) {
+	operands.push(this.FunctionDefinition(t, x, false, Crunchy.EXPRESSED_FORM));
 	state.scanOperand = false;
 	return true;
-}
+},
 
-function ExpressionOperand(t, x, tt, state, operators, operands) {
+ExpressionOperand: function(t, x, tt, state, operators, operands) {
 	var n = new Node(t);
 	if(n.type == "IDENTIFIER")
 		n.name = n.value;
 	operands.push(n);
 	state.scanOperand = false;
 	return true;
-}
+},
 
-function ExpressionArrayInit(t, x, tt, state, operators, operands) {
+ExpressionArrayInit: function(t, x, tt, state, operators, operands) {
 	// Array initialiser.  Parse using recursive descent, as the
 	// sub-grammar here is not an operator grammar.
 	var n = new OperatorNode(t, "ARRAY_INIT");
@@ -691,7 +690,7 @@ function ExpressionArrayInit(t, x, tt, state, operators, operands) {
 			n.pushOperand(new Node(t, "EMPTY"));
 			continue;
 		}
-		n.pushOperand(Expression(t, x, "COMMA"));
+		n.pushOperand(this.Expression(t, x, "COMMA"));
 		if (!t.matchOperator("COMMA"))
 			break;
 	}
@@ -699,9 +698,9 @@ function ExpressionArrayInit(t, x, tt, state, operators, operands) {
 	operands.push(n);
 	state.scanOperand = false;
 	return true;
-}
+},
 
-function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
+ExpressionLeftCurly: function(t, x, tt, state, operators, operands) {
 	// Object initialiser.	As for array initialisers (see above),
 	// parse using recursive descent.
 	++x.curlyLevel;
@@ -714,7 +713,7 @@ function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
 				t.peekOperand().type == "IDENTIFIER") {
 				if (x.ecmaStrictMode)
 					throw t.newSyntaxError("Illegal property accessor");
-				n.pushOperand(FunctionDefinition(t, x, true, Crunchy.EXPRESSED_FORM));
+				n.pushOperand(this.FunctionDefinition(t, x, true, Crunchy.EXPRESSED_FORM));
 			} else {
 				// TODO: isProperty (or all keywords?)
 				switch (tt) {
@@ -735,7 +734,7 @@ function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
 				t.mustMatchOperator("COLON");
 				var n2 = new OperatorNode(t, "PROPERTY_INIT");
 				n2.pushOperand(id);
-				n2.pushOperand(Expression(t, x, "COMMA"));
+				n2.pushOperand(this.Expression(t, x, "COMMA"));
 				n.pushOperand(n2);
 			}
 		} while (t.matchOperand("COMMA"));
@@ -745,25 +744,25 @@ function ExpressionLeftCurly(t, x, tt, state, operators, operands) {
 	state.scanOperand = false;
 	--x.curlyLevel;
 	return true;
-}
+},
 
-function ExpressionRightCurly(t, x, tt, state, operators, operands) {
+ExpressionRightCurly: function(t, x, tt, state, operators, operands) {
 	if (x.curlyLevel != state.cl) throw "PANIC: right curly botch";
 	return false;
-}
+},
 
-function ExpressionGroup(t, x, tt, state, operators, operands) {
+ExpressionGroup: function(t, x, tt, state, operators, operands) {
 	operators.push(new OperatorNode(t, "GROUP"));
 	++x.parenLevel;
 	return true;
-}
+},
 
 // Operator Methods
 
-function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
+ExpressionRightAssociative: function(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
 	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 
 	operators.push(new OperatorNode(t));
 	if (tt == "ASSIGN")
@@ -773,13 +772,13 @@ function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
 
 	state.scanOperand = true;
 	return true;
-}
+},
 
-function ExpressionColon(t, x, tt, state, operators, operands) {
+ExpressionColon: function(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
 	while (operators.length && (Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt] ||
 		operators.top().type == "CONDITIONAL" || operators.top().type == "ASSIGN"))
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 
 	var n = operators.top();
 	if (!n || n.type != "HOOK")
@@ -789,9 +788,9 @@ function ExpressionColon(t, x, tt, state, operators, operands) {
 
 	state.scanOperand = true;
 	return true;
-}
+},
 
-function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
+ExpressionBinaryOperator: function(t, x, tt, state, operators, operands) {
 	// An in operator should not be parsed if we're parsing the head of
 	// a for (...) loop, unless it is in the then part of a conditional
 	// expression, or parenthesized somehow.
@@ -800,7 +799,7 @@ function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 			return false;
 
 	while (operators.length && Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 	if (tt == "DOT") {
 		var n = new OperatorNode(t, "DOT");
 		n.pushOperand(operands.pop());
@@ -813,38 +812,38 @@ function ExpressionBinaryOperator(t, x, tt, state, operators, operands) {
 		state.scanOperand = true;
 	}
 	return true;
-}
+},
 
-function ExpressionPostOperator(t, x, tt, state, operators, operands) {
+ExpressionPostOperator: function(t, x, tt, state, operators, operands) {
 	// Use >, not >=, so postfix has higher precedence than prefix.
 	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 	var n = new OperatorNode(t, tt);
 	n.pushOperand(operands.pop());
 	n.postfix = true;
 	operands.push(n);
 	return true;
-}
+},
 
-function ExpressionIndex(t, x, tt, state, operators, operands) {
+ExpressionIndex: function(t, x, tt, state, operators, operands) {
 	// Property indexing operator.
 	operators.push(new OperatorNode(t, "INDEX"));
 	state.scanOperand = true;
 	++x.bracketLevel;
 	return true;
-}
+},
 
-function ExpressionRightBracket(t, x, tt, state, operators, operands) {
+ExpressionRightBracket: function(t, x, tt, state, operators, operands) {
 	if (x.bracketLevel == state.bl) return false;
-	while (ReduceExpression(t, operators, operands).type != "INDEX")
+	while (this.ReduceExpression(t, operators, operands).type != "INDEX")
 		continue;
 	--x.bracketLevel;
 	return true;
-}
+},
 
-function ExpressionCall(t, x, tt, state, operators, operands) {
+ExpressionCall: function(t, x, tt, state, operators, operands) {
 	while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence["NEW"])
-		ReduceExpression(t, operators, operands);
+		this.ReduceExpression(t, operators, operands);
 
 	// Handle () now, to regularize the n-ary case for n > 0.
 	// We must set scanOperand in case there are arguments and
@@ -871,11 +870,11 @@ function ExpressionCall(t, x, tt, state, operators, operands) {
 
 	++x.parenLevel;
 	return true;
-}
+},
 
-function ExpressionRightParen(t, x, tt, state, operators, operands) {
+ExpressionRightParen: function(t, x, tt, state, operators, operands) {
 	if (x.parenLevel == state.pl) return false;
-	while ((tt = ReduceExpression(t, operators, operands).type) != "GROUP" && tt != "CALL" &&
+	while ((tt = this.ReduceExpression(t, operators, operands).type) != "GROUP" && tt != "CALL" &&
 		   tt != "NEW_WITH_ARGS") {
 		continue;
 	}
@@ -897,9 +896,9 @@ function ExpressionRightParen(t, x, tt, state, operators, operands) {
 	}
 	--x.parenLevel;
 	return true;
-}
+},
 
-function ReduceExpression(t, operators, operands) {
+ReduceExpression: function(t, operators, operands) {
 	var n = operators.pop();
 	var op = n.type;
 	var arity = Crunchy.opArity[op];
@@ -934,72 +933,79 @@ function ReduceExpression(t, operators, operands) {
 	operands.push(n);
 	return n;
 }
+};
 
-var OperandMethods = {
-	"PLUS": ExpressionUnaryOperator,
-	"MINUS": ExpressionUnaryOperator,
-	"DELETE": ExpressionUnaryOperator,
-	"VOID": ExpressionUnaryOperator,
-	"TYPEOF": ExpressionUnaryOperator,
-	"NOT": ExpressionUnaryOperator,
-	"BITWISE_NOT": ExpressionUnaryOperator,
-	"NEW": ExpressionUnaryOperator,
-	"INCREMENT": ExpressionUnaryOperator,
-	"DECREMENT": ExpressionUnaryOperator,
-	"FUNCTION": ExpressionFunction,
-	"NULL": ExpressionOperand,
-	"THIS": ExpressionOperand,
-	"TRUE": ExpressionOperand,
-	"FALSE": ExpressionOperand,
-	"IDENTIFIER": ExpressionOperand,
-	"NUMBER": ExpressionOperand,
-	"STRING": ExpressionOperand,
-	"REGEXP": ExpressionOperand,
-	"LEFT_BRACKET": ExpressionArrayInit,
-	"LEFT_CURLY": ExpressionLeftCurly,
-	"RIGHT_CURLY": ExpressionRightCurly,
-	"LEFT_PAREN": ExpressionGroup
+(function() {
+
+var cpp = Crunchy.Parser.prototype;
+
+cpp.OperandMethods = {
+	"PLUS": cpp.ExpressionUnaryOperator,
+	"MINUS": cpp.ExpressionUnaryOperator,
+	"DELETE": cpp.ExpressionUnaryOperator,
+	"VOID": cpp.ExpressionUnaryOperator,
+	"TYPEOF": cpp.ExpressionUnaryOperator,
+	"NOT": cpp.ExpressionUnaryOperator,
+	"BITWISE_NOT": cpp.ExpressionUnaryOperator,
+	"NEW": cpp.ExpressionUnaryOperator,
+	"INCREMENT": cpp.ExpressionUnaryOperator,
+	"DECREMENT": cpp.ExpressionUnaryOperator,
+	"FUNCTION": cpp.ExpressionFunction,
+	"NULL": cpp.ExpressionOperand,
+	"THIS": cpp.ExpressionOperand,
+	"TRUE": cpp.ExpressionOperand,
+	"FALSE": cpp.ExpressionOperand,
+	"IDENTIFIER": cpp.ExpressionOperand,
+	"NUMBER": cpp.ExpressionOperand,
+	"STRING": cpp.ExpressionOperand,
+	"REGEXP": cpp.ExpressionOperand,
+	"LEFT_BRACKET": cpp.ExpressionArrayInit,
+	"LEFT_CURLY": cpp.ExpressionLeftCurly,
+	"RIGHT_CURLY": cpp.ExpressionRightCurly,
+	"LEFT_PAREN": cpp.ExpressionGroup
 }
 
-var OperatorMethods = {
-	"ASSIGN": ExpressionRightAssociative,
-	"HOOK": ExpressionRightAssociative,
-	"COLON": ExpressionColon,
-	"IN": ExpressionBinaryOperator,
+cpp.OperatorMethods = {
+	"ASSIGN": cpp.ExpressionRightAssociative,
+	"HOOK": cpp.ExpressionRightAssociative,
+	"COLON": cpp.ExpressionColon,
+	"IN": cpp.ExpressionBinaryOperator,
 	// Treat comma as left-associative so reduce can fold left-heavy
 	// COMMA trees into a single array.
 	// FALL THROUGH
-	"COMMA": ExpressionBinaryOperator,
-	"OR": ExpressionBinaryOperator,
-	"AND": ExpressionBinaryOperator,
-	"BITWISE_OR": ExpressionBinaryOperator,
-	"BITWISE_XOR": ExpressionBinaryOperator,
-	"BITWISE_AND": ExpressionBinaryOperator,
-	"EQ": ExpressionBinaryOperator,
-	"NE": ExpressionBinaryOperator,
-	"STRICT_EQ": ExpressionBinaryOperator,
-	"STRICT_NE": ExpressionBinaryOperator,
-	"LT": ExpressionBinaryOperator,
-	"LE": ExpressionBinaryOperator,
-	"GE": ExpressionBinaryOperator,
-	"GT": ExpressionBinaryOperator,
-	"INSTANCEOF": ExpressionBinaryOperator,
-	"LSH": ExpressionBinaryOperator,
-	"RSH": ExpressionBinaryOperator,
-	"URSH": ExpressionBinaryOperator,
-	"PLUS": ExpressionBinaryOperator,
-	"MINUS": ExpressionBinaryOperator,
-	"MUL": ExpressionBinaryOperator,
-	"DIV": ExpressionBinaryOperator,
-	"MOD": ExpressionBinaryOperator,
-	"DOT": ExpressionBinaryOperator,
-	"INCREMENT": ExpressionPostOperator,
-	"DECREMENT": ExpressionPostOperator,
-	"LEFT_BRACKET": ExpressionIndex,
-	"RIGHT_BRACKET": ExpressionRightBracket,
-	"LEFT_PAREN": ExpressionCall,
-	"RIGHT_PAREN": ExpressionRightParen
+	"COMMA": cpp.ExpressionBinaryOperator,
+	"OR": cpp.ExpressionBinaryOperator,
+	"AND": cpp.ExpressionBinaryOperator,
+	"BITWISE_OR": cpp.ExpressionBinaryOperator,
+	"BITWISE_XOR": cpp.ExpressionBinaryOperator,
+	"BITWISE_AND": cpp.ExpressionBinaryOperator,
+	"EQ": cpp.ExpressionBinaryOperator,
+	"NE": cpp.ExpressionBinaryOperator,
+	"STRICT_EQ": cpp.ExpressionBinaryOperator,
+	"STRICT_NE": cpp.ExpressionBinaryOperator,
+	"LT": cpp.ExpressionBinaryOperator,
+	"LE": cpp.ExpressionBinaryOperator,
+	"GE": cpp.ExpressionBinaryOperator,
+	"GT": cpp.ExpressionBinaryOperator,
+	"INSTANCEOF": cpp.ExpressionBinaryOperator,
+	"LSH": cpp.ExpressionBinaryOperator,
+	"RSH": cpp.ExpressionBinaryOperator,
+	"URSH": cpp.ExpressionBinaryOperator,
+	"PLUS": cpp.ExpressionBinaryOperator,
+	"MINUS": cpp.ExpressionBinaryOperator,
+	"MUL": cpp.ExpressionBinaryOperator,
+	"DIV": cpp.ExpressionBinaryOperator,
+	"MOD": cpp.ExpressionBinaryOperator,
+	"DOT": cpp.ExpressionBinaryOperator,
+	"INCREMENT": cpp.ExpressionPostOperator,
+	"DECREMENT": cpp.ExpressionPostOperator,
+	"LEFT_BRACKET": cpp.ExpressionIndex,
+	"RIGHT_BRACKET": cpp.ExpressionRightBracket,
+	"LEFT_PAREN": cpp.ExpressionCall,
+	"RIGHT_PAREN": cpp.ExpressionRightParen
 }
+
+})();
 
 Crunchy.tokenstr = tokenstr;
 Crunchy.parse = function(s, f, l) {
