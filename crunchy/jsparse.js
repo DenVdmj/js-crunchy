@@ -131,7 +131,9 @@ function Node(t, type) {
 	}
 }
 
+var OperatorNode = Node;
 var Np = Node.prototype;
+Node.indentLevel = 0;
 
 Np.setType = function(type) {
 	if(this.type) throw "Type already set";
@@ -143,7 +145,6 @@ Np.setType = function(type) {
 	this.type = type;
 }
 
-var OperatorNode = Node;
 
 Np.pushOperand = function (kid) {
 	return this.children.push(kid);
@@ -165,13 +166,6 @@ Np.forChildren = function(f) {
 	}
 }
 
-Node.indentLevel = 0;
-
-function tokenstr(tt) {
-	var t = Crunchy.tokens[tt];
-	return t ? (/^\W/.test(t) ? Crunchy.opTypeNames[t] : t.toUpperCase()) : "(null)";
-}
-
 Np.toString = function () {
 	var a = [];
 	for (var i in this) {
@@ -190,6 +184,11 @@ Np.toString = function () {
 }
 
 Np.filename = function () { return this.tokenizer.filename; };
+
+function tokenstr(tt) {
+	var t = Crunchy.tokens[tt];
+	return t ? (/^\W/.test(t) ? Crunchy.opTypeNames[t] : t.toUpperCase()) : "(null)";
+}
 
 Crunchy.DECLARED_FORM = 0;
 Crunchy.EXPRESSED_FORM = 1;
