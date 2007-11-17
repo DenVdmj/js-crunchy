@@ -236,8 +236,8 @@ Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 		}
 };
 
-	// Build up data arrays of characters to be used for generating variable
-	// names.
+// Build up data arrays of characters to be used for generating variable
+// names.
 
 (function() {
 	function addChars(first, last, array) {
