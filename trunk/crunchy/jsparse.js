@@ -132,10 +132,10 @@ function Node(t, type) {
 }
 
 var OperatorNode = Node;
-var Np = Node.prototype;
 Node.indentLevel = 0;
 
-Np.setType = function(type) {
+Node.prototype = {
+setType: function(type) {
 	if(this.type) throw "Type already set";
 
 	var info = NodeTypes[type];
@@ -143,14 +143,14 @@ Np.setType = function(type) {
 		for(var i in info) this[i] = info[i];
 	}
 	this.type = type;
-}
+},
 
 
-Np.pushOperand = function (kid) {
+pushOperand: function (kid) {
 	return this.children.push(kid);
-}
+},
 
-Np.forChildren = function(f) {
+forChildren: function(f) {
 	for(var i = 0; i < this.children.length; ++i) {
 		var child = this.children[i];
 		if(child) {
@@ -164,9 +164,9 @@ Np.forChildren = function(f) {
 			}
 		}
 	}
-}
+},
 
-Np.toString = function () {
+toString: function () {
 	var a = [];
 	for (var i in this) {
 		if (this.hasOwnProperty(i) && i != 'type')
@@ -181,9 +181,10 @@ Np.toString = function () {
 	n = --Node.indentLevel;
 	s += "\n" + INDENTATION.repeat(n) + "}";
 	return s;
-}
+},
 
-Np.filename = function () { return this.tokenizer.filename; };
+filename: function () { return this.tokenizer.filename; }
+};
 
 function tokenstr(tt) {
 	var t = Crunchy.tokens[tt];
