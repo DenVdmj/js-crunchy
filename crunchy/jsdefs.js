@@ -220,15 +220,19 @@ Crunchy.contextuallyReservedTokens.forEach(function(t) {
 	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
-(function() {
-	var keywords = {};
+Crunchy.keywords = {};
 
+Crunchy.lookupKeyword = function(keyword) {
+	return Crunchy.keywords[keyword] || false;
+};
+
+(function() {
 	// Define const END, etc., based on the token names.  Also map name to index.
 	for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
 		var t = Crunchy.tokens[i];
 		if (/^[a-z]/.test(t)) {
 			var tt = t.toUpperCase();
-			keywords[t] = tt;
+			Crunchy.keywords[t] = tt;
 		} else {
 			var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
 		}
@@ -240,9 +244,6 @@ Crunchy.contextuallyReservedTokens.forEach(function(t) {
 	Crunchy.tokens["GETTER"] = "get";
 	Crunchy.tokens["SETTER"] = "set";
 
-	Crunchy.lookupKeyword = function(keyword) {
-		return keywords[keyword] || false;
-	}
 
 	// Map assignment operators to their indexes in the tokens array.
 	Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
