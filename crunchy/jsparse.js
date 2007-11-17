@@ -658,31 +658,7 @@ function Expression(t, x, stop) {
 	return operands.pop();
 }
 
-var OperandMethods = {
-	"PLUS": ExpressionUnaryOperator,
-	"MINUS": ExpressionUnaryOperator,
-	"DELETE": ExpressionUnaryOperator,
-	"VOID": ExpressionUnaryOperator,
-	"TYPEOF": ExpressionUnaryOperator,
-	"NOT": ExpressionUnaryOperator,
-	"BITWISE_NOT": ExpressionUnaryOperator,
-	"NEW": ExpressionUnaryOperator,
-	"INCREMENT": ExpressionUnaryOperator,
-	"DECREMENT": ExpressionUnaryOperator,
-	"FUNCTION": ExpressionFunction,
-	"NULL": ExpressionOperand,
-	"THIS": ExpressionOperand,
-	"TRUE": ExpressionOperand,
-	"FALSE": ExpressionOperand,
-	"IDENTIFIER": ExpressionOperand,
-	"NUMBER": ExpressionOperand,
-	"STRING": ExpressionOperand,
-	"REGEXP": ExpressionOperand,
-	"LEFT_BRACKET": ExpressionArrayInit,
-	"LEFT_CURLY": ExpressionLeftCurly,
-	"RIGHT_CURLY": ExpressionRightCurly,
-	"LEFT_PAREN": ExpressionGroup
-}
+// Operator Methods
 
 function ExpressionUnaryOperator(t, x, tt, state, operators, operands) {
 	if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
@@ -782,45 +758,7 @@ function ExpressionGroup(t, x, tt, state, operators, operands) {
 	return true;
 }
 
-var OperatorMethods = {
-	"ASSIGN": ExpressionRightAssociative,
-	"HOOK": ExpressionRightAssociative,
-	"COLON": ExpressionColon,
-	"IN": ExpressionBinaryOperator,
-	// Treat comma as left-associative so reduce can fold left-heavy
-	// COMMA trees into a single array.
-	// FALL THROUGH
-	"COMMA": ExpressionBinaryOperator,
-	"OR": ExpressionBinaryOperator,
-	"AND": ExpressionBinaryOperator,
-	"BITWISE_OR": ExpressionBinaryOperator,
-	"BITWISE_XOR": ExpressionBinaryOperator,
-	"BITWISE_AND": ExpressionBinaryOperator,
-	"EQ": ExpressionBinaryOperator,
-	"NE": ExpressionBinaryOperator,
-	"STRICT_EQ": ExpressionBinaryOperator,
-	"STRICT_NE": ExpressionBinaryOperator,
-	"LT": ExpressionBinaryOperator,
-	"LE": ExpressionBinaryOperator,
-	"GE": ExpressionBinaryOperator,
-	"GT": ExpressionBinaryOperator,
-	"INSTANCEOF": ExpressionBinaryOperator,
-	"LSH": ExpressionBinaryOperator,
-	"RSH": ExpressionBinaryOperator,
-	"URSH": ExpressionBinaryOperator,
-	"PLUS": ExpressionBinaryOperator,
-	"MINUS": ExpressionBinaryOperator,
-	"MUL": ExpressionBinaryOperator,
-	"DIV": ExpressionBinaryOperator,
-	"MOD": ExpressionBinaryOperator,
-	"DOT": ExpressionBinaryOperator,
-	"INCREMENT": ExpressionPostOperator,
-	"DECREMENT": ExpressionPostOperator,
-	"LEFT_BRACKET": ExpressionIndex,
-	"RIGHT_BRACKET": ExpressionRightBracket,
-	"LEFT_PAREN": ExpressionCall,
-	"RIGHT_PAREN": ExpressionRightParen
-}
+// Operator Methods
 
 function ExpressionRightAssociative(t, x, tt, state, operators, operands) {
 	// Use >, not >=, for right-associative operators.
@@ -995,6 +933,72 @@ function ReduceExpression(t, operators, operands) {
 
 	operands.push(n);
 	return n;
+}
+
+var OperandMethods = {
+	"PLUS": ExpressionUnaryOperator,
+	"MINUS": ExpressionUnaryOperator,
+	"DELETE": ExpressionUnaryOperator,
+	"VOID": ExpressionUnaryOperator,
+	"TYPEOF": ExpressionUnaryOperator,
+	"NOT": ExpressionUnaryOperator,
+	"BITWISE_NOT": ExpressionUnaryOperator,
+	"NEW": ExpressionUnaryOperator,
+	"INCREMENT": ExpressionUnaryOperator,
+	"DECREMENT": ExpressionUnaryOperator,
+	"FUNCTION": ExpressionFunction,
+	"NULL": ExpressionOperand,
+	"THIS": ExpressionOperand,
+	"TRUE": ExpressionOperand,
+	"FALSE": ExpressionOperand,
+	"IDENTIFIER": ExpressionOperand,
+	"NUMBER": ExpressionOperand,
+	"STRING": ExpressionOperand,
+	"REGEXP": ExpressionOperand,
+	"LEFT_BRACKET": ExpressionArrayInit,
+	"LEFT_CURLY": ExpressionLeftCurly,
+	"RIGHT_CURLY": ExpressionRightCurly,
+	"LEFT_PAREN": ExpressionGroup
+}
+
+var OperatorMethods = {
+	"ASSIGN": ExpressionRightAssociative,
+	"HOOK": ExpressionRightAssociative,
+	"COLON": ExpressionColon,
+	"IN": ExpressionBinaryOperator,
+	// Treat comma as left-associative so reduce can fold left-heavy
+	// COMMA trees into a single array.
+	// FALL THROUGH
+	"COMMA": ExpressionBinaryOperator,
+	"OR": ExpressionBinaryOperator,
+	"AND": ExpressionBinaryOperator,
+	"BITWISE_OR": ExpressionBinaryOperator,
+	"BITWISE_XOR": ExpressionBinaryOperator,
+	"BITWISE_AND": ExpressionBinaryOperator,
+	"EQ": ExpressionBinaryOperator,
+	"NE": ExpressionBinaryOperator,
+	"STRICT_EQ": ExpressionBinaryOperator,
+	"STRICT_NE": ExpressionBinaryOperator,
+	"LT": ExpressionBinaryOperator,
+	"LE": ExpressionBinaryOperator,
+	"GE": ExpressionBinaryOperator,
+	"GT": ExpressionBinaryOperator,
+	"INSTANCEOF": ExpressionBinaryOperator,
+	"LSH": ExpressionBinaryOperator,
+	"RSH": ExpressionBinaryOperator,
+	"URSH": ExpressionBinaryOperator,
+	"PLUS": ExpressionBinaryOperator,
+	"MINUS": ExpressionBinaryOperator,
+	"MUL": ExpressionBinaryOperator,
+	"DIV": ExpressionBinaryOperator,
+	"MOD": ExpressionBinaryOperator,
+	"DOT": ExpressionBinaryOperator,
+	"INCREMENT": ExpressionPostOperator,
+	"DECREMENT": ExpressionPostOperator,
+	"LEFT_BRACKET": ExpressionIndex,
+	"RIGHT_BRACKET": ExpressionRightBracket,
+	"LEFT_PAREN": ExpressionCall,
+	"RIGHT_PAREN": ExpressionRightParen
 }
 
 Crunchy.tokenstr = tokenstr;
