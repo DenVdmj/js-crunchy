@@ -135,55 +135,54 @@ var OperatorNode = Node;
 Node.indentLevel = 0;
 
 Node.prototype = {
-setType: function(type) {
-	if(this.type) throw "Type already set";
+	setType: function(type) {
+		if(this.type) throw "Type already set";
 
-	var info = NodeTypes[type];
-	if(info) {
-		for(var i in info) this[i] = info[i];
-	}
-	this.type = type;
-},
+		var info = NodeTypes[type];
+		if(info) {
+			for(var i in info) this[i] = info[i];
+		}
+		this.type = type;
+	},
 
+	pushOperand: function (kid) {
+		return this.children.push(kid);
+	},
 
-pushOperand: function (kid) {
-	return this.children.push(kid);
-},
-
-forChildren: function(f) {
-	for(var i = 0; i < this.children.length; ++i) {
-		var child = this.children[i];
-		if(child) {
-			if(child.constructor == Array) {
-				for(var j = 0; j < child.length; ++j) {
-					f(child[j]);
+	forChildren: function(f) {
+		for(var i = 0; i < this.children.length; ++i) {
+			var child = this.children[i];
+			if(child) {
+				if(child.constructor == Array) {
+					for(var j = 0; j < child.length; ++j) {
+						f(child[j]);
+					}
+				}
+				else {
+					f(child);
 				}
 			}
-			else {
-				f(child);
-			}
 		}
-	}
-},
+	},
 
-toString: function () {
-	var a = [];
-	for (var i in this) {
-		if (this.hasOwnProperty(i) && i != 'type')
-			a.push({id: i, value: this[i]});
-	}
-	a.sort(function (a,b) { return (a.id > b.id) - (a.id < b.id); });
-	var INDENTATION = "    ";
-	var n = ++Node.indentLevel;
-	var s = "{\n" + INDENTATION.repeat(n) + "type: " + tokenstr(this.type);
-	for (i = 0; i < a.length; i++)
-		s += ",\n" + INDENTATION.repeat(n) + a[i].id + ": " + a[i].value;
-	n = --Node.indentLevel;
-	s += "\n" + INDENTATION.repeat(n) + "}";
-	return s;
-},
+	toString: function () {
+		var a = [];
+		for (var i in this) {
+			if (this.hasOwnProperty(i) && i != 'type')
+				a.push({id: i, value: this[i]});
+		}
+		a.sort(function (a,b) { return (a.id > b.id) - (a.id < b.id); });
+		var INDENTATION = "    ";
+		var n = ++Node.indentLevel;
+		var s = "{\n" + INDENTATION.repeat(n) + "type: " + tokenstr(this.type);
+		for (i = 0; i < a.length; i++)
+			s += ",\n" + INDENTATION.repeat(n) + a[i].id + ": " + a[i].value;
+		n = --Node.indentLevel;
+		s += "\n" + INDENTATION.repeat(n) + "}";
+		return s;
+	},
 
-filename: function () { return this.tokenizer.filename; }
+	filename: function () { return this.tokenizer.filename; }
 };
 
 function tokenstr(tt) {
