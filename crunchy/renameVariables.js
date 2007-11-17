@@ -1,61 +1,61 @@
-	// Quickly hacked together hash table which avoids clashes with
-	// Object.prototype, or default members such as the magnificant __proto__.
-	//
-	// Not suitable for general use ;)
-	Crunchy.Hash = function() {
-		this.hash = {}
-	}
+// Quickly hacked together hash table which avoids clashes with
+// Object.prototype, or default members such as the magnificant __proto__.
+//
+// Not suitable for general use ;)
+Crunchy.Hash = function() {
+	this.hash = {}
+}
 
-	Crunchy.Hash.prototype = {
-		"prefix" : '$ crunchy $',
-		"genIndex" : function(x) { return this.prefix + x; },
-		"isIndex" : function(x) { return x.indexOf(this.prefix) == 0; },
-		"removePrefix" : function(x) {
-			return this.isIndex(x) ?
-				x.substr(this.prefix.length) :
-				null;
-		},
-		contains : function(x) { return !!this.hash[this.genIndex(x)]; },
-		get : function(x) { return this.hash[this.genIndex(x)] ? this.hash[this.genIndex(x)] : false; },
-		set : function(x, y) { return this.hash[this.genIndex(x)] = y; },
-		insert : function(x,y) {
-			var i = this.genIndex(x);
-			if(this.hash[i])
-				throw "Duplicate insertion into crunchy.Hash: " + x;
-			else
-				this.hash[i] = y;
-			return y;
-		},
-		"forEach" : function(f) {
-			for(var i in this.hash) {
-				var i2 = this.removePrefix(i);
-				if(i2) f(i2, this.hash[i]);
-			}
-		}
-	}
-
-	// Quickly hacked together hash table for associating a key with
-	// multiple values.
-	//
-	// Not suitable for general use ;)
-	// Terrible use of inheritance, I should be ashamed.
-
-	Crunchy.MultiHash = function() { this.hashConstructor(); };
-
-	var cmp = Crunchy.MultiHash.prototype,
-		chp = Crunchy.Hash.prototype;
-	Crunchy.MultiHash.prototype.hashConstructor = Crunchy.Hash;
-	for(var i in Crunchy.Hash.prototype)
-		if(i != 'set') Crunchy.MultiHash.prototype[i] = Crunchy.Hash.prototype[i];
-
-	Crunchy.MultiHash.prototype.insert = function(x,y) {
+Crunchy.Hash.prototype = {
+	"prefix" : '$ crunchy $',
+	"genIndex" : function(x) { return this.prefix + x; },
+	"isIndex" : function(x) { return x.indexOf(this.prefix) == 0; },
+	"removePrefix" : function(x) {
+		return this.isIndex(x) ?
+			x.substr(this.prefix.length) :
+			null;
+	},
+	contains : function(x) { return !!this.hash[this.genIndex(x)]; },
+	get : function(x) { return this.hash[this.genIndex(x)] ? this.hash[this.genIndex(x)] : false; },
+	set : function(x, y) { return this.hash[this.genIndex(x)] = y; },
+	insert : function(x,y) {
 		var i = this.genIndex(x);
 		if(this.hash[i])
-			this.hash[i].push(y);
+			throw "Duplicate insertion into crunchy.Hash: " + x;
 		else
-			this.hash[i] = [y];
+			this.hash[i] = y;
 		return y;
+	},
+	"forEach" : function(f) {
+		for(var i in this.hash) {
+			var i2 = this.removePrefix(i);
+			if(i2) f(i2, this.hash[i]);
+		}
 	}
+}
+
+// Quickly hacked together hash table for associating a key with
+// multiple values.
+//
+// Not suitable for general use ;)
+// Terrible use of inheritance, I should be ashamed.
+
+Crunchy.MultiHash = function() { this.hashConstructor(); };
+
+var cmp = Crunchy.MultiHash.prototype,
+	chp = Crunchy.Hash.prototype;
+Crunchy.MultiHash.prototype.hashConstructor = Crunchy.Hash;
+for(var i in Crunchy.Hash.prototype)
+	if(i != 'set') Crunchy.MultiHash.prototype[i] = Crunchy.Hash.prototype[i];
+
+Crunchy.MultiHash.prototype.insert = function(x,y) {
+	var i = this.genIndex(x);
+	if(this.hash[i])
+		this.hash[i].push(y);
+	else
+		this.hash[i] = [y];
+	return y;
+}
 
 Crunchy.renameVariables = function(root) {
 	Crunchy.renameVariables.findVariables(root);
