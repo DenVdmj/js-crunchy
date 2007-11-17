@@ -146,6 +146,7 @@ const
 	PUBLIC = 107,
 	STATIC = 108,
 	GOTO = 109;
+
 /*
  * Narcissus - JS implemented in JS.
  *
@@ -332,48 +333,51 @@ Crunchy.contextuallyReservedTokens.forEach(function(t) {
 	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
-var keywords = {};
+Crunchy.keywords = {};
 Crunchy.tokens = [];
-
-// Define const END, etc., based on the token names.  Also map name to index.
-for (var i = 0, j = Crunchy.tokenList.length; i < j; i++) {
-	var t = Crunchy.tokenList[i];
-	if (/^[a-z]/.test(t)) {
-		var tt = t.toUpperCase();
-		var val = GLOBAL[tt];
-		keywords[t] = val;
-	} else {
-		var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
-		var val = GLOBAL[tt];
-		Crunchy.opTypeNames[t] = val;
-	}
-	Crunchy.tokens[val] = t;
-	Crunchy.tokens[t] = val;
-	Crunchy.tokens[tt] = t;
-}
-
-// TODO: These aren't stored as keywords - need to improve use of contextually
-// reserved keywords and all that.
-Crunchy.tokens[GETTER] = "get";
-Crunchy.tokens[SETTER] = "set";
-
-// TODO: Yuck.
-for(var i in Crunchy.opArity) {
-	Crunchy.opArity[GLOBAL[i]] = Crunchy.opArity[i];
-}
-
-for(var i in Crunchy.opPrecedence) {
-	Crunchy.opPrecedence[GLOBAL[i]] = Crunchy.opPrecedence[i];
-}
-
-Crunchy.lookupKeyword = function(keyword) {
-	return keywords[keyword] || false;
-}
 
 // Map assignment operators to their indexes in the tokens array.
 Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 
-for (i = 0, j = Crunchy.assignOps.length; i < j; i++) {
-	t = Crunchy.assignOps[i];
-	Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
-}
+(function() {
+	// Define const END, etc., based on the token names.  Also map name to index.
+	for (var i = 0, j = Crunchy.tokenList.length; i < j; i++) {
+		var t = Crunchy.tokenList[i];
+		if (/^[a-z]/.test(t)) {
+			var tt = t.toUpperCase();
+			var val = GLOBAL[tt];
+			Crunchy.keywords[t] = val;
+		} else {
+			var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
+			var val = GLOBAL[tt];
+			Crunchy.opTypeNames[t] = val;
+		}
+		Crunchy.tokens[val] = t;
+		Crunchy.tokens[t] = val;
+		Crunchy.tokens[tt] = t;
+	}
+
+	// TODO: These aren't stored as keywords - need to improve use of contextually
+	// reserved keywords and all that.
+	Crunchy.tokens[GETTER] = "get";
+	Crunchy.tokens[SETTER] = "set";
+
+	// TODO: Yuck.
+	for(var i in Crunchy.opArity) {
+		Crunchy.opArity[GLOBAL[i]] = Crunchy.opArity[i];
+	}
+
+	for(var i in Crunchy.opPrecedence) {
+		Crunchy.opPrecedence[GLOBAL[i]] = Crunchy.opPrecedence[i];
+	}
+
+	Crunchy.lookupKeyword = function(keyword) {
+		return Crunchy.keywords[keyword] || false;
+	};
+
+	for (var i = 0, j = Crunchy.assignOps.length; i < j; i++) {
+		var t = Crunchy.assignOps[i];
+		Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
+	}
+
+})();
