@@ -493,7 +493,7 @@ Crunchy.Parser.prototype = {
 	// Extensions:
 	
 	StatementGoto: function() {
-		// "TODO": Peek for operators not operands. Why? If goto is the first token in an expression, the next is an operator. If goto is the first token
+		// TODO: Peek for operators not operands. Why? If goto is the first token in an expression, the next is an operator. If goto is the first token
 		// in a goto statement, the next token is a label - which will be correctly identified by a peek operator call.
 		var tt = this._tokenizer.peekOnSameLine();
 
