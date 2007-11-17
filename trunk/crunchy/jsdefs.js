@@ -43,7 +43,7 @@
  * done by SpiderMonkey.
  */
 
-Crunchy.tokens = [
+Crunchy.tokenList = [
 	// End of source.
 	"END",
 
@@ -216,20 +216,24 @@ Crunchy.opArity = {
 Crunchy.contextuallyReservedKeywords = {}
 
 Crunchy.contextuallyReservedTokens.forEach(function(t) {
-	Crunchy.tokens.push(t);
+	Crunchy.tokenList.push(t);
 	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
 Crunchy.keywords = {};
+Crunchy.tokens = [];
 
 Crunchy.lookupKeyword = function(keyword) {
 	return Crunchy.keywords[keyword] || false;
 };
 
+// Map assignment operators to their indexes in the tokens array.
+Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
+
 (function() {
 	// Define const END, etc., based on the token names.  Also map name to index.
-	for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
-		var t = Crunchy.tokens[i];
+	for (var i = 0, j = Crunchy.tokenList.length; i < j; i++) {
+		var t = Crunchy.tokenList[i];
 		if (/^[a-z]/.test(t)) {
 			var tt = t.toUpperCase();
 			Crunchy.keywords[t] = tt;
@@ -240,16 +244,14 @@ Crunchy.lookupKeyword = function(keyword) {
 		Crunchy.tokens[tt] = t;
 	}
 
-	// Messy....
+	// TODO: These aren't stored as keywords - need to improve use of contextually
+	// reserved keywords and all that.
 	Crunchy.tokens["GETTER"] = "get";
 	Crunchy.tokens["SETTER"] = "set";
 
 
-	// Map assignment operators to their indexes in the tokens array.
-	Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
-
 	for (var i = 0, j = Crunchy.assignOps.length; i < j; i++) {
-		t = Crunchy.assignOps[i];
+		var t = Crunchy.assignOps[i];
 		Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
 	}
 })();
