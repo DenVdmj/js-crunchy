@@ -50,6 +50,19 @@ CCp.inForLoopInit = false;
 // TODO: Either pull this out of the prototype or delete it.
 CCp.ecmaStrictMode = false;
 
+Crunchy.Parser = function() {
+}
+
+Crunchy.Parser.prototype = {
+	parse: function(s, f, l) {
+		var t = new Crunchy.Tokenizer(s, f, l);
+		var n = Script(t);
+		if (t.peekOperand().type != "END")
+			throw t.newSyntaxError("Syntax error");
+		return n;
+	}
+}
+
 function Script(t) {
 	var n = new Node(t, "SCRIPT");
 	n.setBody(ParseCompilerContext(t, n, false));
@@ -984,14 +997,9 @@ function ReduceExpression(t, operators, operands) {
 	return n;
 }
 
-function parse(s, f, l) {
-	var t = new Crunchy.Tokenizer(s, f, l);
-	var n = Script(t);
-	if (t.peekOperand().type != "END")
-		throw t.newSyntaxError("Syntax error");
-	return n;
-}
-
 Crunchy.tokenstr = tokenstr;
-Crunchy.parse = parse;
+Crunchy.parse = function(s, f, l) {
+	var p = new Crunchy.Parser;
+	return p.parse(s, f, l);
+}
 })();
