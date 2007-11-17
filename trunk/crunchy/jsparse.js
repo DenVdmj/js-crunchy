@@ -50,33 +50,6 @@ CCp.inForLoopInit = false;
 // TODO: Either pull this out of the prototype or delete it.
 CCp.ecmaStrictMode = false;
 
-Crunchy.Parser = function() {
-}
-
-Crunchy.Parser.prototype = {
-	parse: function(s, f, l) {
-		var t = new Crunchy.Tokenizer(s, f, l);
-		var n = Script(t);
-		if (t.peekOperand().type != "END")
-			throw t.newSyntaxError("Syntax error");
-		return n;
-	}
-}
-
-function Script(t) {
-	var n = new Node(t, "SCRIPT");
-	n.setBody(ParseCompilerContext(t, n, false));
-	return n;
-}
-
-function ParseCompilerContext(t, n, inFunction) {
-	var x = new CompilerContext(inFunction);
-	var nodes = Statements(t, x);
-	n.funDecls = x.funDecls;
-	n.varDecls = x.varDecls;
-	return nodes;
-}
-
 var NodeTypes = {
 	SCRIPT : [ "body" ], // also: funDecls, varDecls
 	IF : [ "condition", "thenPart", "elsePart" ],
@@ -214,6 +187,37 @@ Np.toString = function () {
 
 Np.filename = function () { return this.tokenizer.filename; };
 
+Crunchy.DECLARED_FORM = 0;
+Crunchy.EXPRESSED_FORM = 1;
+Crunchy.STATEMENT_FORM = 2;
+
+Crunchy.Parser = function() {
+}
+
+Crunchy.Parser.prototype = {
+	parse: function(s, f, l) {
+		var t = new Crunchy.Tokenizer(s, f, l);
+		var n = Script(t);
+		if (t.peekOperand().type != "END")
+			throw t.newSyntaxError("Syntax error");
+		return n;
+	}
+}
+
+function Script(t) {
+	var n = new Node(t, "SCRIPT");
+	n.setBody(ParseCompilerContext(t, n, false));
+	return n;
+}
+
+function ParseCompilerContext(t, n, inFunction) {
+	var x = new CompilerContext(inFunction);
+	var nodes = Statements(t, x);
+	n.funDecls = x.funDecls;
+	n.varDecls = x.varDecls;
+	return nodes;
+}
+
 function Statements(t, x) {
 	var tt,nodes = [];
 	while ((tt = t.peekOperand().type) != "END" && tt != "RIGHT_CURLY")
@@ -233,10 +237,6 @@ function OptionalBlock(t, x) {
 	--x.nestedLevel;
 	return s;
 }
-
-Crunchy.DECLARED_FORM = 0;
-Crunchy.EXPRESSED_FORM = 1;
-Crunchy.STATEMENT_FORM = 2;
 
 function Statement(t, x) {
 	// TODO: Here we might have previously called 'peekOperator', and
