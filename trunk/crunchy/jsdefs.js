@@ -220,33 +220,35 @@ Crunchy.contextuallyReservedTokens.forEach(function(t) {
 	Crunchy.contextuallyReservedKeywords[t] = t.toUpperCase();
 });
 
-var keywords = {};
+(function() {
+	var keywords = {};
 
-// Define const END, etc., based on the token names.  Also map name to index.
-for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
-	var t = Crunchy.tokens[i];
-	if (/^[a-z]/.test(t)) {
-		var tt = t.toUpperCase();
-		keywords[t] = tt;
-	} else {
-		var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
+	// Define const END, etc., based on the token names.  Also map name to index.
+	for (var i = 0, j = Crunchy.tokens.length; i < j; i++) {
+		var t = Crunchy.tokens[i];
+		if (/^[a-z]/.test(t)) {
+			var tt = t.toUpperCase();
+			keywords[t] = tt;
+		} else {
+			var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
+		}
+		Crunchy.tokens[t] = tt;
+		Crunchy.tokens[tt] = t;
 	}
-	Crunchy.tokens[t] = tt;
-	Crunchy.tokens[tt] = t;
-}
 
-// Messy....
-Crunchy.tokens["GETTER"] = "get";
-Crunchy.tokens["SETTER"] = "set";
+	// Messy....
+	Crunchy.tokens["GETTER"] = "get";
+	Crunchy.tokens["SETTER"] = "set";
 
-Crunchy.lookupKeyword = function(keyword) {
-	return keywords[keyword] || false;
-}
+	Crunchy.lookupKeyword = function(keyword) {
+		return keywords[keyword] || false;
+	}
 
-// Map assignment operators to their indexes in the tokens array.
-Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
+	// Map assignment operators to their indexes in the tokens array.
+	Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 
-for (i = 0, j = Crunchy.assignOps.length; i < j; i++) {
-	t = Crunchy.assignOps[i];
-	Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
-}
+	for (var i = 0, j = Crunchy.assignOps.length; i < j; i++) {
+		t = Crunchy.assignOps[i];
+		Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
+	}
+})();
