@@ -43,13 +43,13 @@ Crunchy.CompilerContext = function(inFunction) {
 
 Crunchy.CompilerContext.prototype = {
 	bracketLevel: 0,
-    curlyLevel: 0,
-    parenLevel: 0,
-    hookLevel: 0,
-    inForLoopInit: false,
+	curlyLevel: 0,
+	parenLevel: 0,
+	hookLevel: 0,
+	inForLoopInit: false,
 
-    // TODO: Either pull this out of the prototype or delete it.
-    ecmaStrictMode: false
+	// TODO: Either pull this out of the prototype or delete it.
+	ecmaStrictMode: false
 };
 
 Crunchy.NodeTypes = {
@@ -248,297 +248,265 @@ Crunchy.Parser.prototype = {
 	Statement: function() {
 		// TODO: Here we might have previously called 'peekOperator', and
 		// auto-inserted a semi-colon.
-		return (this.StatementMethods[this._tokenizer.getOperand()] || this.StatementMethods['default']).call(this);
+		return (this.StatementMethods[this._tokenizer.getOperand()] || this.StatementDefault).call(this);
 	},
 
-	StatementMethods: {
-		"FUNCTION" : function() {
-			return [this.FunctionDefinition(true,
-					this._context.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
+	StatementFunction: function() {
+		return [this.FunctionDefinition(true,
+				this._context.nestedLevel > 0 ? Crunchy.STATEMENT_FORM : Crunchy.DECLARED_FORM)];
+	},
 
-		},
-
-		"LEFT_CURLY" : function() {
-			++this._context.nestedLevel;
-			var children = this.Statements();
-			--this._context.nestedLevel;
-			this._tokenizer.mustMatchOperator("RIGHT_CURLY");
-			if(this._context.nestedLevel == 0) {
-				var n = new Crunchy.Node(this._tokenizer, "BLOCK");
-				n.children = children;
-				return [n];
-			}
-			else {
-				return children;
-			}
-		},
-
-		"IF" : function() {
-			var n = new Crunchy.Node(this._tokenizer, "IF");
-			n.setCondition(this.ParenExpression());
-			n.setThenPart(this.OptionalBlock());
-			n.setElsePart(this._tokenizer.matchOperator("ELSE") ? this.OptionalBlock() : null);
+	StatementLeftCurly: function() {
+		++this._context.nestedLevel;
+		var children = this.Statements();
+		--this._context.nestedLevel;
+		this._tokenizer.mustMatchOperator("RIGHT_CURLY");
+		if(this._context.nestedLevel == 0) {
+			var n = new Crunchy.Node(this._tokenizer, "BLOCK");
+			n.children = children;
 			return [n];
-		},
+		}
+		else {
+			return children;
+		}
+	},
 
-		"SWITCH" : function() {
-			var tt;
-			var n = new Crunchy.Node(this._tokenizer);
+	StatementIf: function() {
+		var n = new Crunchy.Node(this._tokenizer, "IF");
+		n.setCondition(this.ParenExpression());
+		n.setThenPart(this.OptionalBlock());
+		n.setElsePart(this._tokenizer.matchOperator("ELSE") ? this.OptionalBlock() : null);
+		return [n];
+	},
 
-			this._tokenizer.mustMatchOperator("LEFT_PAREN");
-			n.setDiscriminant(this.Expression());
-			this._tokenizer.mustMatchOperator("RIGHT_PAREN");
+	StatementSwitch: function() {
+		var tt;
+		var n = new Crunchy.Node(this._tokenizer);
 
-			var cases = [];
-			this._tokenizer.mustMatchOperand("LEFT_CURLY");
-			++this._context.nestedLevel;
-			while ((tt = this._tokenizer.getOperand()) != "RIGHT_CURLY") {			
-				var n2 = new Crunchy.Node(this._tokenizer);
-				if(tt == "CASE") {
-					n2.setCaseLabel(this.Expression("COLON"));
-				}
-				else if(tt != "DEFAULT") {
-					throw this._tokenizer.newSyntaxError("Invalid switch case");
-				}
-				this._tokenizer.mustMatchOperand("COLON");
-				var statements = [];
-				while ((tt=this._tokenizer.peekOperand().type) != "CASE" && tt != "DEFAULT" && tt != "RIGHT_CURLY")
-					statements = statements.concat(this.Statement());
-				n2.setStatements(statements);
-				cases.push(n2);
+		this._tokenizer.mustMatchOperator("LEFT_PAREN");
+		n.setDiscriminant(this.Expression());
+		this._tokenizer.mustMatchOperator("RIGHT_PAREN");
+
+		var cases = [];
+		this._tokenizer.mustMatchOperand("LEFT_CURLY");
+		++this._context.nestedLevel;
+		while ((tt = this._tokenizer.getOperand()) != "RIGHT_CURLY") {			
+			var n2 = new Crunchy.Node(this._tokenizer);
+			if(tt == "CASE") {
+				n2.setCaseLabel(this.Expression("COLON"));
 			}
-			--this._context.nestedLevel;
-			n.setCases(cases);
-
-			return [n];
-		},
-
-		"FOR" : function() {
-			var n = new Crunchy.Node(this._tokenizer, "");
-			n.isLoop = true;
-			this._tokenizer.mustMatchOperator("LEFT_PAREN");
-
-			var tt, n2;
-			if ((tt = this._tokenizer.peekOperand().type) != "SEMICOLON") {
-				this._context.inForLoopInit = true;
-				if (tt == "VAR" || tt == "CONST") {
-					this._tokenizer.getOperand();
-					n2 = this.Variables();
-				} else {
-					n2 = this.Expression();
-				}
-				this._context.inForLoopInit = false;
+			else if(tt != "DEFAULT") {
+				throw this._tokenizer.newSyntaxError("Invalid switch case");
 			}
+			this._tokenizer.mustMatchOperand("COLON");
+			var statements = [];
+			while ((tt=this._tokenizer.peekOperand().type) != "CASE" && tt != "DEFAULT" && tt != "RIGHT_CURLY")
+				statements = statements.concat(this.Statement());
+			n2.setStatements(statements);
+			cases.push(n2);
+		}
+		--this._context.nestedLevel;
+		n.setCases(cases);
 
-			// TODO: I'm not sure about this...
-			// Really it shouldn't matter if I say Operator or Operand
-			// but operator seems to be appropriate here - even though it
-			// used to Operand.
-			if (n2 && this._tokenizer.matchOperator("IN")) {
-				n.setType("FOR_IN");
-				n.isLoop = true;
-				if (n2.type == "VAR" && n2.children.length != 1) {
-					throw this._tokenizer.newSyntaxError("Invalid for..in left-hand side");
-				}
+		return [n];
+	},
 
-				n.setIterator(n2);
-				n.setObject(this.Expression());
+	StatementFor: function() {
+		var n = new Crunchy.Node(this._tokenizer, "");
+		n.isLoop = true;
+		this._tokenizer.mustMatchOperator("LEFT_PAREN");
+
+		var tt, n2;
+		if ((tt = this._tokenizer.peekOperand().type) != "SEMICOLON") {
+			this._context.inForLoopInit = true;
+			if (tt == "VAR" || tt == "CONST") {
+				this._tokenizer.getOperand();
+				n2 = this.Variables();
 			} else {
-				n.setType("FOR");
-				n.setSetup(n2 || null);
-				this._tokenizer.mustMatchOperator("SEMICOLON");
-				n.setCondition((this._tokenizer.peekOperand().type == "SEMICOLON") ? null : this.Expression());
-				this._tokenizer.mustMatchOperator("SEMICOLON");
-				n.setUpdate((this._tokenizer.peekOperand().type == "RIGHT_PAREN") ? null : this.Expression());
+				n2 = this.Expression();
+			}
+			this._context.inForLoopInit = false;
+		}
+
+		// TODO: I'm not sure about this...
+		// Really it shouldn't matter if I say Operator or Operand
+		// but operator seems to be appropriate here - even though it
+		// used to Operand.
+		if (n2 && this._tokenizer.matchOperator("IN")) {
+			n.setType("FOR_IN");
+			n.isLoop = true;
+			if (n2.type == "VAR" && n2.children.length != 1) {
+				throw this._tokenizer.newSyntaxError("Invalid for..in left-hand side");
+			}
+
+			n.setIterator(n2);
+			n.setObject(this.Expression());
+		} else {
+			n.setType("FOR");
+			n.setSetup(n2 || null);
+			this._tokenizer.mustMatchOperator("SEMICOLON");
+			n.setCondition((this._tokenizer.peekOperand().type == "SEMICOLON") ? null : this.Expression());
+			this._tokenizer.mustMatchOperator("SEMICOLON");
+			n.setUpdate((this._tokenizer.peekOperand().type == "RIGHT_PAREN") ? null : this.Expression());
+		}
+		this._tokenizer.mustMatchOperator("RIGHT_PAREN");
+		n.setBody(this.OptionalBlock());
+		return [n];
+	},
+
+	StatementWhile: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.isLoop = true;
+		n.setCondition(this.ParenExpression());
+		n.setBody(this.OptionalBlock());
+		return [n];
+	},
+
+	StatementDo: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.isLoop = true;
+		// TODO: I forget if the block really is optional.
+		n.setBody(this.OptionalBlock());
+		this._tokenizer.mustMatchOperand("WHILE");
+		n.setCondition(this.ParenExpression());
+
+		// Several javascript implementations allow automatic semicolon
+		// insertion without a newline after do-while.
+		// See http://bugzilla.mozilla.org/show_bug.cgi?id=238945.
+		if (this._context.ecmaStrictMode) this.StatementEnd(); 
+		else this._tokenizer.matchOperand("SEMICOLON");
+		return [n];
+	},
+
+	StatementBreakContinue: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		if (this._tokenizer.peekOnSameLine().isProperty) {
+			this._tokenizer.getOperand();
+			n.label = this._tokenizer.token().value;
+		}
+		this.StatementEnd();
+		return [n];
+	},
+
+	StatementTry: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.setTryBlock(this.Block());
+		var catchClauses = [];
+		while (this._tokenizer.matchOperand("CATCH")) {
+			var n2 = new Crunchy.Node(this._tokenizer);
+			this._tokenizer.mustMatchOperator("LEFT_PAREN");
+			// TODO: isProperty
+			n2.varName = this._tokenizer.mustMatchOperand("IDENTIFIER").value;
+			if (this._tokenizer.matchOperand("IF")) {
+				if (this._context.ecmaStrictMode)
+					throw this._tokenizer.newSyntaxError("Illegal catch guard");
+				if (catchClauses.length && !catchClauses.top().guard)
+					throw this._tokenizer.newSyntaxError("Guarded catch after unguarded");
+				n2.setGuard(this.Expression());
+			} else {
+				n2.setGuard(null);
 			}
 			this._tokenizer.mustMatchOperator("RIGHT_PAREN");
-			n.setBody(this.OptionalBlock());
-			return [n];
-		},
+			n2.setBlock(this.Block());
+			catchClauses.push(n2);
+		}
+		n.setCatchClauses(catchClauses);
+		if (this._tokenizer.matchOperand("FINALLY"))
+			n.setFinallyBlock(this.Block());
+		if (!n.catchClauses.length && !n.finallyBlock)
+			throw this._tokenizer.newSyntaxError("Invalid try statement");
+		return [n];
+	},
 
-		"WHILE" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			n.isLoop = true;
-			n.setCondition(this.ParenExpression());
-			n.setBody(this.OptionalBlock());
-			return [n];
+	StatementCatchFinally: function() {
+		throw this._tokenizer.newSyntaxError("catch/finally without preceding try");
+	},
 
-		},
+	StatementThrow: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.setException(this.Expression());
+		this.StatementEnd();
+		return [n];
+	},
 
-		"DO" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			n.isLoop = true;
-			// TODO: I forget if the block really is optional.
-			n.setBody(this.OptionalBlock());
-			this._tokenizer.mustMatchOperand("WHILE");
-			n.setCondition(this.ParenExpression());
+	StatementReturn: function() {
+		if (!this._context.inFunction)
+			throw this._tokenizer.newSyntaxError("Invalid return");
+		var n = new Crunchy.Node(this._tokenizer);
+		var tt = this._tokenizer.peekOnSameLine().type;
+		if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
+			n.setReturnValue(this.Expression());
+		this.StatementEnd();
+		return [n];
+	},
 
-			// Several javascript implementations allow automatic semicolon
-			// insertion without a newline after do-while.
-			// See http://bugzilla.mozilla.org/show_bug.cgi?id=238945.
-			if (this._context.ecmaStrictMode) this.StatementEnd(); 
-			else this._tokenizer.matchOperand("SEMICOLON");
-			return [n];
+	StatementWith: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.setObject(this.ParenExpression());
+		// TODO: I forget if with statement requires curlies.
+		n.setBody(this.OptionalBlock());
+		return [n];
+	},
 
-		},
+	StatementVarConst: function() {
+		var n = this.Variables();
+		this.StatementEnd();
+		return [n];
+	},
 
-		"BREAK" : function() {
-			// TODO: Duplicat of CONTINUE....
-			var n = new Crunchy.Node(this._tokenizer);
-			if (this._tokenizer.peekOnSameLine().isProperty) {
-				this._tokenizer.getOperand();
-				n.label = this._tokenizer.token().value;
-			}
-			this.StatementEnd();
-			return [n];
-		},
+	StatementDebugger: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		this.StatementEnd();
+		return [n];
+	},
 
-		"CONTINUE" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			if (this._tokenizer.peekOnSameLine().isProperty) {
-				this._tokenizer.getOperand();
-				n.label = this._tokenizer.token().value;
-			}
-			this.StatementEnd();
-			return [n];
-		},
+	// Newline/Semi-colon
+	StatementEmpty: function() {
+		return [];
+	},
 
-		"TRY" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			n.setTryBlock(this.Block());
-			var catchClauses = [];
-			while (this._tokenizer.matchOperand("CATCH")) {
-				var n2 = new Crunchy.Node(this._tokenizer);
-				this._tokenizer.mustMatchOperator("LEFT_PAREN");
-				// TODO: isProperty
-				n2.varName = this._tokenizer.mustMatchOperand("IDENTIFIER").value;
-				if (this._tokenizer.matchOperand("IF")) {
-					if (this._context.ecmaStrictMode)
-						throw this._tokenizer.newSyntaxError("Illegal catch guard");
-					if (catchClauses.length && !catchClauses.top().guard)
-						throw this._tokenizer.newSyntaxError("Guarded catch after unguarded");
-					n2.setGuard(this.Expression());
-				} else {
-					n2.setGuard(null);
-				}
-				this._tokenizer.mustMatchOperator("RIGHT_PAREN");
-				n2.setBlock(this.Block());
-				catchClauses.push(n2);
-			}
-			n.setCatchClauses(catchClauses);
-			if (this._tokenizer.matchOperand("FINALLY"))
-				n.setFinallyBlock(this.Block());
-			if (!n.catchClauses.length && !n.finallyBlock)
-				throw this._tokenizer.newSyntaxError("Invalid try statement");
-			return [n];
+	StatementDebugSemicolon: function() {
+		var n = new Crunchy.Node(this._tokenizer);
+		n.setStatement(this.Statement());
+		return [n];
+	},
 
-		},
-
-		"CATCH" : function() {
-			// TODO: Duplicate of FINALLY
-			throw this._tokenizer.newSyntaxError("catch without preceding try");
-		},
-
-		"FINALLY" : function() {
-			throw this._tokenizer.newSyntaxError("finally without preceding try");
-		},
-
-		"THROW" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			n.setException(this.Expression());
-			this.StatementEnd();
-			return [n];
-		},
-
-		"RETURN" : function() {
-			if (!this._context.inFunction)
-				throw this._tokenizer.newSyntaxError("Invalid return");
-			var n = new Crunchy.Node(this._tokenizer);
-			var tt = this._tokenizer.peekOnSameLine().type;
-			if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
-				n.setReturnValue(this.Expression());
-			this.StatementEnd();
-			return [n];
-		},
-
-		"WITH" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			n.setObject(this.ParenExpression());
-			// TODO: I forget if with statement requires curlies.
-			n.setBody(this.OptionalBlock());
-			return [n];
-
-		},
-
-		"VAR" : function() {
-			var n = this.Variables();
-			this.StatementEnd();
-			return [n];
-		},
-
-		"CONST" : function() {
-			var n = this.Variables();
-			this.StatementEnd();
-			return [n];
-		},
-
-		"DEBUGGER" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
-			this.StatementEnd();
-			return [n];
-		},
-		
-		"NEWLINE" : function() {
-			return [];
-		},
-
-		"SEMICOLON" : function() {
-			return [];
-		},
-
-		"DEBUG_SEMICOLON" : function() {
-			var n = new Crunchy.Node(this._tokenizer);
+	StatementDefault: function() {
+		if (this._tokenizer.token().isProperty && this._tokenizer.peekOperator().type == "COLON")
+		{
+			var label = this._tokenizer.token().value;
+			this._tokenizer.getOperand();
+			var n = new Crunchy.Node(this._tokenizer, "LABEL");
+			n.label = label;
 			n.setStatement(this.Statement());
 			return [n];
-		},
+		}
+		else {
+			var n = new Crunchy.Node(this._tokenizer, "SEMICOLON");
+			this._tokenizer.unget();
+			n.setExpression(this.Expression());
+			this.StatementEnd();
+			return [n];
+		}
+	},
 
-		"default": function() {
-			if (this._tokenizer.token().isProperty && this._tokenizer.peekOperator().type == "COLON")
-			{
-				var label = this._tokenizer.token().value;
-				this._tokenizer.getOperand();
-				var n = new Crunchy.Node(this._tokenizer, "LABEL");
-				n.label = label;
-				n.setStatement(this.Statement());
-				return [n];
-			}
-			else {
-				var n = new Crunchy.Node(this._tokenizer, "SEMICOLON");
-				this._tokenizer.unget();
-				n.setExpression(this.Expression());
-				this.StatementEnd();
-				return [n];
-			}
-		},
+	// Extensions:
+	
+	StatementGoto: function() {
+		// "TODO": Peek for operators not operands. Why? If goto is the first token in an expression, the next is an operator. If goto is the first token
+		// in a goto statement, the next token is a label - which will be correctly identified by a peek operator call.
+		var tt = this._tokenizer.peekOnSameLine();
 
-		// Extensions:
-		
-		"GOTO": function() {
-			// TODO: Peek for operators not operands. Why? If goto is the first token in an expression, the next is an operator. If goto is the first token
-			// in a goto statement, the next token is a label - which will be correctly identified by a peek operator call.
-			var tt = this._tokenizer.peekOnSameLine();
-
-			if(tt.isProperty) {
-				// TODO: Duplicate of BREAK/CONTINUE (sort of).
-				var n = new Crunchy.Node(this._tokenizer);
-				this._tokenizer.getOperand();
-				n.label = this._tokenizer.token().value;
-				this.StatementEnd();
-				return [n];
-			}
-			else {
-				return this.StatementMethods['default'].call(this);
-			}
+		if(tt.isProperty) {
+			// TODO: Duplicate of BREAK/CONTINUE (sort of).
+			var n = new Crunchy.Node(this._tokenizer);
+			this._tokenizer.getOperand();
+			n.label = this._tokenizer.token().value;
+			this.StatementEnd();
+			return [n];
+		}
+		else {
+			return this.StatementDefault();
 		}
 	},
 
@@ -946,6 +914,32 @@ Crunchy.Parser.prototype = {
 (function() {
 
 var cpp = Crunchy.Parser.prototype;
+
+cpp.StatementMethods = {
+	"FUNCTION": cpp.StatementFunction,
+	"LEFT_CURLY": cpp.StatementLeftCurly,
+	"IF": cpp.StatementIf,
+	"SWITCH": cpp.StatementSwitch,
+	"FOR": cpp.StatementFor,
+	"WHILE": cpp.StatementWhile,
+	"DO": cpp.StatementDo,
+	"BREAK": cpp.StatementBreakContinue,
+	"CONTINUE": cpp.StatementBreakContinue,
+	"TRY": cpp.StatementTry,
+	"CATCH": cpp.StatementCatchFinally,
+	"FINALLY": cpp.StatementCatchFinally,
+	"THROW": cpp.StatementThrow,
+	"RETURN": cpp.StatementReturn,
+	"WITH": cpp.StatementWith,
+	"VAR": cpp.StatementVarConst,
+	"CONST": cpp.StatementVarConst,
+	"DEBUGGER": cpp.StatementDebugger,
+	"NEWLINE": cpp.StatementEmpty,
+	"SEMICOLON": cpp.StatementEmpty,
+	"DEBUG_SEMICOLON": cpp.StatementDebugSemicolon,
+// Extensions
+	"GOTO": cpp.StatementGoto
+}
 
 cpp.OperandMethods = {
 	"PLUS": cpp.ExpressionUnaryOperator,
