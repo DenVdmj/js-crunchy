@@ -34,16 +34,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-(function() {
-
-function CompilerContext(inFunction) {
+Crunchy.CompilerContext = function(inFunction) {
 	this.inFunction = inFunction;
 	this.nestedLevel = 0;
 	this.funDecls = [];
 	this.varDecls = [];
 }
 
-CompilerContext.prototype = {
+Crunchy.CompilerContext.prototype = {
 	bracketLevel: 0,
     curlyLevel: 0,
     parenLevel: 0,
@@ -54,7 +52,7 @@ CompilerContext.prototype = {
     ecmaStrictMode: false
 };
 
-var NodeTypes = {
+Crunchy.NodeTypes = {
 	SCRIPT : [ "body" ], // also: funDecls, varDecls
 	IF : [ "condition", "thenPart", "elsePart" ],
 	SWITCH : [ "discriminant", "cases" ], // also: defaultIndex
@@ -84,37 +82,39 @@ var NodeTypes = {
 	GOTO : [],
 	GETTER : [ "body" ], // also: name, params, functionForm, funDecls, varDecls
 	SETTER : [ "body" ]  // also: name, params, functionForm, funDecls, varDecls
-}
+};
 
-//function addSetter(object, name, index) {
-//	  return function(n) {
-//		  this[name] = n;
-//		  this.children[index] = n;
-//	  }
-//}
+(function() {
+	//function addSetter(object, name, index) {
+	//	  return function(n) {
+	//		  this[name] = n;
+	//		  this.children[index] = n;
+	//	  }
+	//}
 
-function getNodeType(info) {
-	var result = {};
+	function getNodeType(info) {
+		var result = {};
 
-	for(var i=0; i<info.length; ++i) {
-		var name = info[i];
+		for(var i=0; i<info.length; ++i) {
+			var name = info[i];
 
-		//result["set" + name[0].toUpperCase() + name.substr(1)]
-		//	  = addSetter(result, name, i);
+			//result["set" + name[0].toUpperCase() + name.substr(1)]
+			//	  = addSetter(result, name, i);
 
-		eval("result.set" + name.charAt(0).toUpperCase() + name.substr(1) +
-				" = function(n) { " +
-				"this." + name + " = n;" +
-				"this.children[" + i + "] = n" +
-			"}");
+			eval("result.set" + name.charAt(0).toUpperCase() + name.substr(1) +
+					" = function(n) { " +
+					"this." + name + " = n;" +
+					"this.children[" + i + "] = n" +
+				"}");
+		}
+
+		return result;
 	}
 
-	return result;
-}
+	for(var i in Crunchy.NodeTypes) Crunchy.NodeTypes[i] = getNodeType(Crunchy.NodeTypes[i]);
+})();
 
-for(var i in NodeTypes) NodeTypes[i] = getNodeType(NodeTypes[i]);
-
-function Node(t, type) {
+Crunchy.Node = function(t, type) {
 	var token = t.token();
 	if (token) {
 		this.type = typeof(type) == "string" ? type : token.type;
@@ -125,20 +125,20 @@ function Node(t, type) {
 	this.tokenizer = t;
 	this.children = [];
 
-	var info = NodeTypes[this.type];
+	var info = Crunchy.NodeTypes[this.type];
 	if(this.type && info) {
 		for(var i in info) this[i] = info[i];
 	}
 }
 
-var OperatorNode = Node;
-Node.indentLevel = 0;
+Crunchy.OperatorNode = Crunchy.Node;
+Crunchy.Node.indentLevel = 0;
 
-Node.prototype = {
+Crunchy.Node.prototype = {
 	setType: function(type) {
 		if(this.type) throw "Type already set";
 
-		var info = NodeTypes[type];
+		var info = Crunchy.NodeTypes[type];
 		if(info) {
 			for(var i in info) this[i] = info[i];
 		}
@@ -173,11 +173,11 @@ Node.prototype = {
 		}
 		a.sort(function (a,b) { return (a.id > b.id) - (a.id < b.id); });
 		var INDENTATION = "    ";
-		var n = ++Node.indentLevel;
-		var s = "{\n" + INDENTATION.repeat(n) + "type: " + tokenstr(this.type);
+		var n = ++Crunchy.Node.indentLevel;
+		var s = "{\n" + INDENTATION.repeat(n) + "type: " + Crunchy.tokenstr(this.type);
 		for (i = 0; i < a.length; i++)
 			s += ",\n" + INDENTATION.repeat(n) + a[i].id + ": " + a[i].value;
-		n = --Node.indentLevel;
+		n = --Crunchy.Node.indentLevel;
 		s += "\n" + INDENTATION.repeat(n) + "}";
 		return s;
 	},
@@ -185,7 +185,7 @@ Node.prototype = {
 	filename: function () { return this.tokenizer.filename; }
 };
 
-function tokenstr(tt) {
+Crunchy.tokenstr = function(tt) {
 	var t = Crunchy.tokens[tt];
 	return t ? (/^\W/.test(t) ? Crunchy.opTypeNames[t] : t.toUpperCase()) : "(null)";
 }
@@ -207,7 +207,7 @@ Crunchy.Parser.prototype = {
 	},
 
 	Script: function() {
-		var n = new Node(this._tokenizer, "SCRIPT");
+		var n = new Crunchy.Node(this._tokenizer, "SCRIPT");
 		n.setBody(this.ParseCompilerContext(n, false));
 		return n;
 	},
@@ -215,7 +215,7 @@ Crunchy.Parser.prototype = {
 	ParseCompilerContext: function(n, inFunction) {
 		var oldContext = this._context;
 		try {
-			this._context = new CompilerContext(inFunction);
+			this._context = new Crunchy.CompilerContext(inFunction);
 			var nodes = this.Statements();
 			n.funDecls = this._context.funDecls;
 			n.varDecls = this._context.varDecls;
@@ -264,7 +264,7 @@ Crunchy.Parser.prototype = {
 			--this._context.nestedLevel;
 			this._tokenizer.mustMatchOperator("RIGHT_CURLY");
 			if(this._context.nestedLevel == 0) {
-				var n = new Node(this._tokenizer, "BLOCK");
+				var n = new Crunchy.Node(this._tokenizer, "BLOCK");
 				n.children = children;
 				return [n];
 			}
@@ -274,7 +274,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"IF" : function() {
-			var n = new Node(this._tokenizer, "IF");
+			var n = new Crunchy.Node(this._tokenizer, "IF");
 			n.setCondition(this.ParenExpression());
 			n.setThenPart(this.OptionalBlock());
 			n.setElsePart(this._tokenizer.matchOperator("ELSE") ? this.OptionalBlock() : null);
@@ -283,7 +283,7 @@ Crunchy.Parser.prototype = {
 
 		"SWITCH" : function() {
 			var tt;
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 
 			this._tokenizer.mustMatchOperator("LEFT_PAREN");
 			n.setDiscriminant(this.Expression());
@@ -293,7 +293,7 @@ Crunchy.Parser.prototype = {
 			this._tokenizer.mustMatchOperand("LEFT_CURLY");
 			++this._context.nestedLevel;
 			while ((tt = this._tokenizer.getOperand()) != "RIGHT_CURLY") {			
-				var n2 = new Node(this._tokenizer);
+				var n2 = new Crunchy.Node(this._tokenizer);
 				if(tt == "CASE") {
 					n2.setCaseLabel(this.Expression("COLON"));
 				}
@@ -314,7 +314,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"FOR" : function() {
-			var n = new Node(this._tokenizer, "");
+			var n = new Crunchy.Node(this._tokenizer, "");
 			n.isLoop = true;
 			this._tokenizer.mustMatchOperator("LEFT_PAREN");
 
@@ -357,7 +357,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"WHILE" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.isLoop = true;
 			n.setCondition(this.ParenExpression());
 			n.setBody(this.OptionalBlock());
@@ -366,7 +366,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"DO" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.isLoop = true;
 			// TODO: I forget if the block really is optional.
 			n.setBody(this.OptionalBlock());
@@ -384,7 +384,7 @@ Crunchy.Parser.prototype = {
 
 		"BREAK" : function() {
 			// TODO: Duplicat of CONTINUE....
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			if (this._tokenizer.peekOnSameLine().isProperty) {
 				this._tokenizer.getOperand();
 				n.label = this._tokenizer.token().value;
@@ -394,7 +394,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"CONTINUE" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			if (this._tokenizer.peekOnSameLine().isProperty) {
 				this._tokenizer.getOperand();
 				n.label = this._tokenizer.token().value;
@@ -404,11 +404,11 @@ Crunchy.Parser.prototype = {
 		},
 
 		"TRY" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.setTryBlock(this.Block());
 			var catchClauses = [];
 			while (this._tokenizer.matchOperand("CATCH")) {
-				var n2 = new Node(this._tokenizer);
+				var n2 = new Crunchy.Node(this._tokenizer);
 				this._tokenizer.mustMatchOperator("LEFT_PAREN");
 				// TODO: isProperty
 				n2.varName = this._tokenizer.mustMatchOperand("IDENTIFIER").value;
@@ -444,7 +444,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"THROW" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.setException(this.Expression());
 			this.StatementEnd();
 			return [n];
@@ -453,7 +453,7 @@ Crunchy.Parser.prototype = {
 		"RETURN" : function() {
 			if (!this._context.inFunction)
 				throw this._tokenizer.newSyntaxError("Invalid return");
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			var tt = this._tokenizer.peekOnSameLine().type;
 			if (tt != "END" && tt != "NEWLINE" && tt != "SEMICOLON" && tt != "DEBUG_SEMICOLON" && tt != "RIGHT_CURLY")
 				n.setReturnValue(this.Expression());
@@ -462,7 +462,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"WITH" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.setObject(this.ParenExpression());
 			// TODO: I forget if with statement requires curlies.
 			n.setBody(this.OptionalBlock());
@@ -483,7 +483,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"DEBUGGER" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			this.StatementEnd();
 			return [n];
 		},
@@ -497,7 +497,7 @@ Crunchy.Parser.prototype = {
 		},
 
 		"DEBUG_SEMICOLON" : function() {
-			var n = new Node(this._tokenizer);
+			var n = new Crunchy.Node(this._tokenizer);
 			n.setStatement(this.Statement());
 			return [n];
 		},
@@ -507,13 +507,13 @@ Crunchy.Parser.prototype = {
 			{
 				var label = this._tokenizer.token().value;
 				this._tokenizer.getOperand();
-				var n = new Node(this._tokenizer, "LABEL");
+				var n = new Crunchy.Node(this._tokenizer, "LABEL");
 				n.label = label;
 				n.setStatement(this.Statement());
 				return [n];
 			}
 			else {
-				var n = new Node(this._tokenizer, "SEMICOLON");
+				var n = new Crunchy.Node(this._tokenizer, "SEMICOLON");
 				this._tokenizer.unget();
 				n.setExpression(this.Expression());
 				this.StatementEnd();
@@ -530,7 +530,7 @@ Crunchy.Parser.prototype = {
 
 			if(tt.isProperty) {
 				// TODO: Duplicate of BREAK/CONTINUE (sort of).
-				var n = new Node(this._tokenizer);
+				var n = new Crunchy.Node(this._tokenizer);
 				this._tokenizer.getOperand();
 				n.label = this._tokenizer.token().value;
 				this.StatementEnd();
@@ -559,7 +559,7 @@ Crunchy.Parser.prototype = {
 		else if(token.value == "set") var type = "SETTER";
 		else throw("Invalid function.")
 
-		var f = new Node(this._tokenizer, type);
+		var f = new Crunchy.Node(this._tokenizer, type);
 
 		// TODO: isProperty
 		if (this._tokenizer.matchOperand("IDENTIFIER"))
@@ -604,11 +604,11 @@ Crunchy.Parser.prototype = {
 	},
 
 	Variables: function() {
-		var n = new OperatorNode(this._tokenizer);
+		var n = new Crunchy.OperatorNode(this._tokenizer);
 		do {
 			// TODO: isProperty
 			this._tokenizer.mustMatchOperand("IDENTIFIER");
-			var n2 = new Node(this._tokenizer);
+			var n2 = new Crunchy.Node(this._tokenizer);
 			n2.name = n2.value;
 			if (this._tokenizer.matchOperator("ASSIGN")) {
 				if (this._tokenizer.token().assignOp)
@@ -669,7 +669,7 @@ Crunchy.Parser.prototype = {
 
 	ExpressionUnaryOperator: function(tt, state, operators, operands) {
 		if(tt == 'PLUS' || tt == 'MINUS') tt = 'UNARY_' + tt;
-		operators.push(new OperatorNode(this._tokenizer, tt));
+		operators.push(new Crunchy.OperatorNode(this._tokenizer, tt));
 		return true;
 	},
 
@@ -680,7 +680,7 @@ Crunchy.Parser.prototype = {
 	},
 
 	ExpressionOperand: function(tt, state, operators, operands) {
-		var n = new Node(this._tokenizer);
+		var n = new Crunchy.Node(this._tokenizer);
 		if(n.type == "IDENTIFIER")
 			n.name = n.value;
 		operands.push(n);
@@ -691,11 +691,11 @@ Crunchy.Parser.prototype = {
 	ExpressionArrayInit: function(tt, state, operators, operands) {
 		// Array initialiser.  Parse using recursive descent, as the
 		// sub-grammar here is not an operator grammar.
-		var n = new OperatorNode(this._tokenizer, "ARRAY_INIT");
+		var n = new Crunchy.OperatorNode(this._tokenizer, "ARRAY_INIT");
 		while ((tt = this._tokenizer.peekOperand().type) != "RIGHT_BRACKET") {
 			if (tt == "COMMA") {
 				this._tokenizer.getOperand();
-				n.pushOperand(new Node(this._tokenizer, "EMPTY"));
+				n.pushOperand(new Crunchy.Node(this._tokenizer, "EMPTY"));
 				continue;
 			}
 			n.pushOperand(this.Expression("COMMA"));
@@ -712,7 +712,7 @@ Crunchy.Parser.prototype = {
 		// Object initialiser.	As for array initialisers (see above),
 		// parse using recursive descent.
 		++this._context.curlyLevel;
-		var n = new OperatorNode(this._tokenizer, "OBJECT_INIT");
+		var n = new Crunchy.OperatorNode(this._tokenizer, "OBJECT_INIT");
 	  objectInit:
 		if (!this._tokenizer.matchOperand("RIGHT_CURLY")) {
 			do {
@@ -726,11 +726,11 @@ Crunchy.Parser.prototype = {
 					// TODO: isProperty (or all keywords?)
 					switch (tt) {
 					  case "IDENTIFIER":
-						var id = new Node(this._tokenizer, "MEMBER_IDENTIFIER");
+						var id = new Crunchy.Node(this._tokenizer, "MEMBER_IDENTIFIER");
 						break;
 					  case "NUMBER":
 					  case "STRING":
-						var id = new Node(this._tokenizer);
+						var id = new Crunchy.Node(this._tokenizer);
 						break;
 					  case "RIGHT_CURLY":
 						if (this._context.ecmaStrictMode)
@@ -740,7 +740,7 @@ Crunchy.Parser.prototype = {
 						throw this._tokenizer.newSyntaxError("Invalid property name");
 					}
 					this._tokenizer.mustMatchOperator("COLON");
-					var n2 = new OperatorNode(this._tokenizer, "PROPERTY_INIT");
+					var n2 = new Crunchy.OperatorNode(this._tokenizer, "PROPERTY_INIT");
 					n2.pushOperand(id);
 					n2.pushOperand(this.Expression("COMMA"));
 					n.pushOperand(n2);
@@ -760,7 +760,7 @@ Crunchy.Parser.prototype = {
 	},
 
 	ExpressionGroup: function(tt, state, operators, operands) {
-		operators.push(new OperatorNode(this._tokenizer, "GROUP"));
+		operators.push(new Crunchy.OperatorNode(this._tokenizer, "GROUP"));
 		++this._context.parenLevel;
 		return true;
 	},
@@ -772,7 +772,7 @@ Crunchy.Parser.prototype = {
 		while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 			this.ReduceExpression(operators, operands);
 
-		operators.push(new OperatorNode(this._tokenizer));
+		operators.push(new Crunchy.OperatorNode(this._tokenizer));
 		if (tt == "ASSIGN")
 			operands.top().assignOp = this._tokenizer.token().assignOp;
 		else
@@ -809,14 +809,14 @@ Crunchy.Parser.prototype = {
 		while (operators.length && Crunchy.opPrecedence[operators.top().type] >= Crunchy.opPrecedence[tt])
 			this.ReduceExpression(operators, operands);
 		if (tt == "DOT") {
-			var n = new OperatorNode(this._tokenizer, "DOT");
+			var n = new Crunchy.OperatorNode(this._tokenizer, "DOT");
 			n.pushOperand(operands.pop());
 			// TODO: isProperty
 			this._tokenizer.mustMatchOperand("IDENTIFIER");
-			n.pushOperand(new Node(this._tokenizer, "MEMBER_IDENTIFIER"));
+			n.pushOperand(new Crunchy.Node(this._tokenizer, "MEMBER_IDENTIFIER"));
 			operands.push(n);
 		} else {
-			operators.push(new OperatorNode(this._tokenizer));
+			operators.push(new Crunchy.OperatorNode(this._tokenizer));
 			state.scanOperand = true;
 		}
 		return true;
@@ -826,7 +826,7 @@ Crunchy.Parser.prototype = {
 		// Use >, not >=, so postfix has higher precedence than prefix.
 		while (operators.length && Crunchy.opPrecedence[operators.top().type] > Crunchy.opPrecedence[tt])
 			this.ReduceExpression(operators, operands);
-		var n = new OperatorNode(this._tokenizer, tt);
+		var n = new Crunchy.OperatorNode(this._tokenizer, tt);
 		n.pushOperand(operands.pop());
 		n.postfix = true;
 		operands.push(n);
@@ -835,7 +835,7 @@ Crunchy.Parser.prototype = {
 
 	ExpressionIndex: function(tt, state, operators, operands) {
 		// Property indexing operator.
-		operators.push(new OperatorNode(this._tokenizer, "INDEX"));
+		operators.push(new Crunchy.OperatorNode(this._tokenizer, "INDEX"));
 		state.scanOperand = true;
 		++this._context.bracketLevel;
 		return true;
@@ -863,9 +863,9 @@ Crunchy.Parser.prototype = {
 				--operators.length;
 				n.pushOperand(operands.pop());
 			} else {
-				n = new OperatorNode(this._tokenizer, "CALL");
+				n = new Crunchy.OperatorNode(this._tokenizer, "CALL");
 				n.pushOperand(operands.pop());
-				n.pushOperand(new OperatorNode(this._tokenizer, "LIST"));
+				n.pushOperand(new Crunchy.OperatorNode(this._tokenizer, "LIST"));
 			}
 			operands.push(n);
 			state.scanOperand = false;
@@ -874,7 +874,7 @@ Crunchy.Parser.prototype = {
 		if (n && n.type == "NEW")
 			n.type = "NEW_WITH_ARGS";
 		else
-			operators.push(new OperatorNode(this._tokenizer, "CALL"));
+			operators.push(new Crunchy.OperatorNode(this._tokenizer, "CALL"));
 
 		++this._context.parenLevel;
 		return true;
@@ -891,7 +891,7 @@ Crunchy.Parser.prototype = {
 			var last = n.children.length - 1;
 			var n2 = n.children[last];
 			if (n2.type != "COMMA") {
-				n.children[last] = new OperatorNode(this._tokenizer, "LIST");
+				n.children[last] = new Crunchy.OperatorNode(this._tokenizer, "LIST");
 				n.children[last].pushOperand(n2);
 			} else
 				n.children[last].type = "LIST";
@@ -1015,9 +1015,7 @@ cpp.OperatorMethods = {
 
 })();
 
-Crunchy.tokenstr = tokenstr;
 Crunchy.parse = function(s, f, l) {
 	var p = new Crunchy.Parser;
 	return p.parse(s, f, l);
 }
-})();
