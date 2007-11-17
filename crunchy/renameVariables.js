@@ -9,12 +9,6 @@ Crunchy.Hash = function() {
 Crunchy.Hash.prototype = {
 	"prefix" : '$ crunchy $',
 	"genIndex" : function(x) { return this.prefix + x; },
-	"isIndex" : function(x) { return x.indexOf(this.prefix) == 0; },
-	"removePrefix" : function(x) {
-		return this.isIndex(x) ?
-			x.substr(this.prefix.length) :
-			null;
-	},
 	contains : function(x) { return !!this.hash[this.genIndex(x)]; },
 	get : function(x) { return this.hash[this.genIndex(x)] ? this.hash[this.genIndex(x)] : false; },
 	set : function(x, y) { return this.hash[this.genIndex(x)] = y; },
@@ -28,8 +22,9 @@ Crunchy.Hash.prototype = {
 	},
 	"forEach" : function(f) {
 		for(var i in this.hash) {
-			var i2 = this.removePrefix(i);
-			if(i2) f(i2, this.hash[i]);
+			if(i.indexOf(this.prefix) == 0) {
+				f(i.substr(this.prefix.length), this.hash[i]);
+			}
 		}
 	}
 }
