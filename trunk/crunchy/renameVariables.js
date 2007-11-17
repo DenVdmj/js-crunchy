@@ -58,189 +58,189 @@
 	}
 })();
 
-	Crunchy.renameVariables = function(root) {
-		Crunchy.renameVariables.findVariables(root);
-		Crunchy.renameVariables.rename(root);
-		//findSpecialNames(root);
-	}
+Crunchy.renameVariables = function(root) {
+	Crunchy.renameVariables.findVariables(root);
+	Crunchy.renameVariables.rename(root);
+	//findSpecialNames(root);
+}
 
-	// Scopes
+// Scopes
 
-	Crunchy.renameVariables.ScopeVar = function(name, scope, node) {
-		//if(!(scope instanceof Scope))
-		if(!scope)
-			Crunchy.error("Creating ScopeVar without scope.");
-		this.name = name;
-		this.scopes = [scope];
-		this.stopRename = scope.fixVariableNames;
-		if(node) this.node = node;
-	};
+Crunchy.renameVariables.ScopeVar = function(name, scope, node) {
+	//if(!(scope instanceof Scope))
+	if(!scope)
+		Crunchy.error("Creating ScopeVar without scope.");
+	this.name = name;
+	this.scopes = [scope];
+	this.stopRename = scope.fixVariableNames;
+	if(node) this.node = node;
+};
 
-	Crunchy.renameVariables.Scope = function(parent, fixVariableNames) {
-		this.parent = parent;
-		this.fixVariableNames = fixVariableNames;
-		this.decls = new Crunchy.Hash;
-		this.refs = new Crunchy.Hash;
-	}
+Crunchy.renameVariables.Scope = function(parent, fixVariableNames) {
+	this.parent = parent;
+	this.fixVariableNames = fixVariableNames;
+	this.decls = new Crunchy.Hash;
+	this.refs = new Crunchy.Hash;
+}
 
-	Crunchy.renameVariables.Scope.prototype = {
-		setVars : function(parsed) {
-			var decls = this.decls;
-			var scope = this;
+Crunchy.renameVariables.Scope.prototype = {
+	setVars : function(parsed) {
+		var decls = this.decls;
+		var scope = this;
 
-			function addVar(node) {
-				if(!decls.contains(node.name)) {
-					decls.insert(node.name,
-						new Crunchy.renameVariables.ScopeVar(node.name, scope, node));
-				}
+		function addVar(node) {
+			if(!decls.contains(node.name)) {
+				decls.insert(node.name,
+					new Crunchy.renameVariables.ScopeVar(node.name, scope, node));
 			}
+		}
 
-			parsed.varDecls.forEach(addVar);
-			parsed.funDecls.forEach(addVar);
-		},
+		parsed.varDecls.forEach(addVar);
+		parsed.funDecls.forEach(addVar);
+	},
 
-		setParams : function(p) {
-			var result = [];
-			for(var i = 0; i < p.length; ++i) {
-				var x = new Crunchy.renameVariables.ScopeVar(p[i], this);
-				result[i] = x;
-				this.decls.insert(p[i], x);
+	setParams : function(p) {
+		var result = [];
+		for(var i = 0; i < p.length; ++i) {
+			var x = new Crunchy.renameVariables.ScopeVar(p[i], this);
+			result[i] = x;
+			this.decls.insert(p[i], x);
+		}
+		return result;
+	},
+
+	refVar : function(node) {
+		var x = this.decls.get(node.name) || this.refs.get(node.name);
+		if(!x) {
+			if (this.parent) {
+				x = this.parent.refVar(node);
+				x.scopes.push(this);
+				x.stopRename = x.stopRename || this.fixVariableNames;
+				node.unclearMatch = node.unclearMatch  || this.fixVariableNames;
 			}
-			return result;
-		},
+			else {
+				x = this.decls.insert(node.name, new Crunchy.renameVariables.ScopeVar(node.name, this));
+			}
+		}
+		return x;
+	},
 
-		refVar : function(node) {
-			var x = this.decls.get(node.name) || this.refs.get(node.name);
-			if(!x) {
-				if (this.parent) {
-					x = this.parent.refVar(node);
-					x.scopes.push(this);
-					x.stopRename = x.stopRename || this.fixVariableNames;
-					node.unclearMatch = node.unclearMatch  || this.fixVariableNames;
+	setMutable : function() {
+		this.decls.forEach(function(name, v) { v.stopRename = true })
+		this.refs.forEach(function(name, v) { v.stopRename = true })
+	}
+};
+
+// Identify the variables, and which can be changed.
+
+Crunchy.renameVariables.findVariables = function(root) {
+	// Note: The rename algorithm relies on ScopeList being in
+	// prefix order.
+	root.scopeList = [];
+	this.findVariablesLoop(root, {
+		currentScope : null,
+		ScopeList : root.scopeList
+	});
+}
+
+Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
+		if(!node) return;
+		if(node.constructor == Array) {
+			for(var i = 0; i < node.length; ++i)
+				this.findVariablesLoop(node[i], x);
+			return;
+		}
+
+		switch(node.type) {
+		case "SCRIPT":
+			// This scope is the global scope, so fix variable names
+			node.scope = new this.Scope(x.currentScope, true);
+			x.ScopeList.push(node.scope);
+			node.scope.setVars(node);
+			break;
+		case "FUNCTION":
+		case "GETTER":
+		case "SETTER":
+			node.scope = new this.Scope(x.currentScope, false);
+			x.ScopeList.push(node.scope);
+
+			// TODO: Is this right for STATEMENT_FORM?
+			if(node.type == "FUNCTION" && node.name) {
+				if(node.functionForm == Crunchy.EXPRESSED_FORM) {
+					node.name2 = new this.ScopeVar(node.name, node.scope);
+					node.scope.decls.insert(node.name, node.name2);
 				}
 				else {
-					x = this.decls.insert(node.name, new Crunchy.renameVariables.ScopeVar(node.name, this));
+					node.name2 = x.currentScope.refVar(node);
 				}
 			}
-			return x;
-		},
 
-		setMutable : function() {
-			this.decls.forEach(function(name, v) { v.stopRename = true })
-			this.refs.forEach(function(name, v) { v.stopRename = true })
-		}
-	};
+			node.params2 = node.scope.setParams(node.params);
+			node.scope.setVars(node);
+			break;
+		case "IDENTIFIER":
+			node.ref = x.currentScope.refVar(node);
 
-	// Identify the variables, and which can be changed.
+			// TODO #1: This probably shouldn't be here, should separate
+			//   the variable lookup stuff from the renaming stuff.
+			// TODO #2: I should really change the node, not just set a
+			//   value.
+			// TODO #4: 'node.ref.node != node' is a horrible hack to avoid
+			//   changing the actual const statement. Surely I can do
+			//   better..
 
-	Crunchy.renameVariables.findVariables = function(root) {
-		// Note: The rename algorithm relies on ScopeList being in
-		// prefix order.
-		root.scopeList = [];
-		this.findVariablesLoop(root, {
-			currentScope : null,
-			ScopeList : root.scopeList
-		});
-	}
-
-	Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
-			if(!node) return;
-			if(node.constructor == Array) {
-				for(var i = 0; i < node.length; ++i)
-					this.findVariablesLoop(node[i], x);
-				return;
+			if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
+					node.ref.node != node &&
+					node.ref.node.initializer &&
+					node.ref.node.initializer.type == "NUMBER") {
+				node.constValue = node.ref.node.initializer;
 			}
+			break;
+		case "CALL":
+			// Calls to eval can add variables or access variables in parent scopes.
+			// So need to fix the variable names in all those scopes.
+			//
+			// There are tons of cases that this doesn't catch but I think it
+			// would be impossible to deal with them all. I can't even detect:
+			//	   window.eval('var x = 1');
+			// Although, that's not strictly standard ECMAscript.
 
-			switch(node.type) {
-			case "SCRIPT":
-				// This scope is the global scope, so fix variable names
-				node.scope = new this.Scope(x.currentScope, true);
-				x.ScopeList.push(node.scope);
-				node.scope.setVars(node);
-				break;
-			case "FUNCTION":
-			case "GETTER":
-			case "SETTER":
-				node.scope = new this.Scope(x.currentScope, false);
-				x.ScopeList.push(node.scope);
-
-				// TODO: Is this right for STATEMENT_FORM?
-				if(node.type == "FUNCTION" && node.name) {
-					if(node.functionForm == Crunchy.EXPRESSED_FORM) {
-						node.name2 = new this.ScopeVar(node.name, node.scope);
-						node.scope.decls.insert(node.name, node.name2);
-					}
-					else {
-						node.name2 = x.currentScope.refVar(node);
-					}
-				}
-
-				node.params2 = node.scope.setParams(node.params);
-				node.scope.setVars(node);
-				break;
-			case "IDENTIFIER":
-				node.ref = x.currentScope.refVar(node);
-
-				// TODO #1: This probably shouldn't be here, should separate
-				//   the variable lookup stuff from the renaming stuff.
-				// TODO #2: I should really change the node, not just set a
-				//   value.
-				// TODO #4: 'node.ref.node != node' is a horrible hack to avoid
-				//   changing the actual const statement. Surely I can do
-				//   better..
-
-				if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
-						node.ref.node != node &&
-						node.ref.node.initializer &&
-						node.ref.node.initializer.type == "NUMBER") {
-					node.constValue = node.ref.node.initializer;
-				}
-				break;
-			case "CALL":
-				// Calls to eval can add variables or access variables in parent scopes.
-				// So need to fix the variable names in all those scopes.
-				//
-				// There are tons of cases that this doesn't catch but I think it
-				// would be impossible to deal with them all. I can't even detect:
-				//	   window.eval('var x = 1');
-				// Although, that's not strictly standard ECMAscript.
-
-				if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
-					for(var i = x.currentScope; i; i = i.parent)
-						i.setMutable();
-				}
-				break;
-			case "WITH":
-				node.scope = new this.Scope(x.currentScope, true);
-				this.findVariablesLoop(node.object, x);
-				x.ScopeList.push(node.scope);
-				var oldScope = x.currentScope;
-				x.currentScope = node.scope;
-				this.findVariablesLoop(node.body, x);
-				x.currentScope = oldScope;
-				return;
-			case "CATCH":
-				node.scope = new this.Scope(x.currentScope);
-				x.ScopeList.push(node.scope);
-				node.varRef = new this.ScopeVar(node.varName, node.scope);
-				node.scope.decls.insert(node.varName, node.varRef);
-				break;
-			default:
-				this.findVariablesLoop(node.children, x);
-				return;
+			if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
+				for(var i = x.currentScope; i; i = i.parent)
+					i.setMutable();
 			}
-
-			if(node.scope) {
-				var oldScope = x.currentScope;
-				x.currentScope = node.scope;
-			}
-
+			break;
+		case "WITH":
+			node.scope = new this.Scope(x.currentScope, true);
+			this.findVariablesLoop(node.object, x);
+			x.ScopeList.push(node.scope);
+			var oldScope = x.currentScope;
+			x.currentScope = node.scope;
+			this.findVariablesLoop(node.body, x);
+			x.currentScope = oldScope;
+			return;
+		case "CATCH":
+			node.scope = new this.Scope(x.currentScope);
+			x.ScopeList.push(node.scope);
+			node.varRef = new this.ScopeVar(node.varName, node.scope);
+			node.scope.decls.insert(node.varName, node.varRef);
+			break;
+		default:
 			this.findVariablesLoop(node.children, x);
+			return;
+		}
 
-			if(oldScope) {
-				x.currentScope = oldScope;
-			}
-	};
+		if(node.scope) {
+			var oldScope = x.currentScope;
+			x.currentScope = node.scope;
+		}
+
+		this.findVariablesLoop(node.children, x);
+
+		if(oldScope) {
+			x.currentScope = oldScope;
+		}
+};
 
 	// Build up data arrays of characters to be used for generating variable
 	// names.
@@ -261,98 +261,98 @@
 })();
 
 
-	Crunchy.renameVariables.genName = function(x){
-		var name = "";
-		var mod = x % this.chars1.length;
-		name += this.chars1[mod];
-		x = (x - mod) / this.chars1.length - 1;
-		while(x >= 0) {
-			mod = x % this.chars2.length;
-			name += this.chars2[mod];
-			x = (x - mod) / this.chars2.length - 1;
-		}
-
-		return name;
+Crunchy.renameVariables.genName = function(x){
+	var name = "";
+	var mod = x % this.chars1.length;
+	name += this.chars1[mod];
+	x = (x - mod) / this.chars1.length - 1;
+	while(x >= 0) {
+		mod = x % this.chars2.length;
+		name += this.chars2[mod];
+		x = (x - mod) / this.chars2.length - 1;
 	}
 
-	// Rename the variables from root.
+	return name;
+}
 
-	Crunchy.renameVariables.rename = function(root) {
-		var s = root.scopeList;
-		if(!s) {
-			Crunchy.error("renameVariables called for node without a scope list.");
-			return;
+// Rename the variables from root.
+
+Crunchy.renameVariables.rename = function(root) {
+	var s = root.scopeList;
+	if(!s) {
+		Crunchy.error("renameVariables called for node without a scope list.");
+		return;
+	}
+
+	var variables = [], fixed = new Crunchy.MultiHash;
+	for(var i = 0; i < s.length; ++i) {
+		s[i].decls.forEach(function(name, v) {
+			// TODO: The check for arguments is a really nasty hack.
+			// It does the right thing, but in the wrong way, since variables
+			// are going to be matched with the wrong place. 'arguments' should
+			// be caught in 'refVar', possibly by adding arguments to all function
+			// scopes.
+			if(v.fixed || v.stopRename || v.name === "arguments") {
+				fixed.insert(name, v);
+			}
+			// Not bothering with 'special' names for now. Maybe deal with them optionally
+			// in the future.
+			//
+			//else if(/^_[A-Za-z\d]/.test(v.name)) {
+			//	// Do nothing for _names (I never generate clashing names)
+			//}
+			//else if(/\x24[a-zA-Z\x24_]/.test(v.name)) {
+			//	// Reserve the abbreviated version of the name.
+			//	// No need to reserve the actual name as I never generate a dollar name.
+			//	var abbr = v.name.replace(/((\x24+)([a-zA-Z\x24_]+))(\d*)/g,
+			//		function(name, prefix, dollars, letters, suffix) {
+			//			var length = dollars.length;
+			//			var start = length - Math.max(length - letters.length, 0);
+			//			return name.substr(start, length) + suffix;
+			//		}	
+			//	);
+			//	fixed.insert(abbr, v);
+			//}
+			else {
+				v.oldName = v.name;
+				delete v.name;
+				v["Crunchy::rename::mark"] = -1;
+				variables.push(v);
+			}
+		});
+	}
+
+	for(var id = 0; variables.length > 0; ++id) {
+		var newName = this.genName(id);
+		if(Crunchy.lookupKeyword(newName)) continue;
+
+		function markClashes(scopes) {
+			for(var i = 0; i < scopes.length; ++i) {
+				scopes[i].decls.forEach(function(index, value){
+					value["Crunchy::rename::mark"] = id;
+				});
+				scopes[i].refs.forEach(function(index, value){
+					value["Crunchy::rename::mark"] = id;
+				});
+			}
 		}
 
-		var variables = [], fixed = new Crunchy.MultiHash;
-		for(var i = 0; i < s.length; ++i) {
-			s[i].decls.forEach(function(name, v) {
-				// TODO: The check for arguments is a really nasty hack.
-				// It does the right thing, but in the wrong way, since variables
-				// are going to be matched with the wrong place. 'arguments' should
-				// be caught in 'refVar', possibly by adding arguments to all function
-				// scopes.
-				if(v.fixed || v.stopRename || v.name === "arguments") {
-					fixed.insert(name, v);
-				}
-				// Not bothering with 'special' names for now. Maybe deal with them optionally
-				// in the future.
-				//
-				//else if(/^_[A-Za-z\d]/.test(v.name)) {
-				//	// Do nothing for _names (I never generate clashing names)
-				//}
-				//else if(/\x24[a-zA-Z\x24_]/.test(v.name)) {
-				//	// Reserve the abbreviated version of the name.
-				//	// No need to reserve the actual name as I never generate a dollar name.
-				//	var abbr = v.name.replace(/((\x24+)([a-zA-Z\x24_]+))(\d*)/g,
-				//		function(name, prefix, dollars, letters, suffix) {
-				//			var length = dollars.length;
-				//			var start = length - Math.max(length - letters.length, 0);
-				//			return name.substr(start, length) + suffix;
-				//		}	
-				//	);
-				//	fixed.insert(abbr, v);
-				//}
-				else {
-					v.oldName = v.name;
-					delete v.name;
-					v["Crunchy::rename::mark"] = -1;
-					variables.push(v);
-				}
+		if(fixed.contains(newName)) {
+			fixed.get(newName).forEach(function(x) {
+				markClashes(x.scopes);
 			});
 		}
 
-		for(var id = 0; variables.length > 0; ++id) {
-			var newName = this.genName(id);
-			if(Crunchy.lookupKeyword(newName)) continue;
-
-			function markClashes(scopes) {
-				for(var i = 0; i < scopes.length; ++i) {
-					scopes[i].decls.forEach(function(index, value){
-						value["Crunchy::rename::mark"] = id;
-					});
-					scopes[i].refs.forEach(function(index, value){
-						value["Crunchy::rename::mark"] = id;
-					});
-				}
+		var i = 0;
+		while(i < variables.length) {
+			if(!variables[i].name && variables[i]["Crunchy::rename::mark"] != id) {
+				variables[i].name = newName;
+				markClashes(variables[i].scopes);
+				variables.splice(i, 1);
 			}
-
-			if(fixed.contains(newName)) {
-				fixed.get(newName).forEach(function(x) {
-					markClashes(x.scopes);
-				});
-			}
-
-			var i = 0;
-			while(i < variables.length) {
-				if(!variables[i].name && variables[i]["Crunchy::rename::mark"] != id) {
-					variables[i].name = newName;
-					markClashes(variables[i].scopes);
-					variables.splice(i, 1);
-				}
-				else {
-					++i;
-				}
+			else {
+				++i;
 			}
 		}
 	}
+}
