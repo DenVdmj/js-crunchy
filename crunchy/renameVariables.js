@@ -1,4 +1,3 @@
-;(function() {
 	// Quickly hacked together hash table which avoids clashes with
 	// Object.prototype, or default members such as the magnificant __proto__.
 	//
@@ -42,13 +41,14 @@
 	// Terrible use of inheritance, I should be ashamed.
 
 	Crunchy.MultiHash = function() { this.hashConstructor(); };
+
 	var cmp = Crunchy.MultiHash.prototype,
 		chp = Crunchy.Hash.prototype;
-	cmp.hashConstructor = Crunchy.Hash;
-	for(var i in chp)
-		if(i != 'set') cmp[i] = chp[i];
+	Crunchy.MultiHash.prototype.hashConstructor = Crunchy.Hash;
+	for(var i in Crunchy.Hash.prototype)
+		if(i != 'set') Crunchy.MultiHash.prototype[i] = Crunchy.Hash.prototype[i];
 
-	cmp.insert = function(x,y) {
+	Crunchy.MultiHash.prototype.insert = function(x,y) {
 		var i = this.genIndex(x);
 		if(this.hash[i])
 			this.hash[i].push(y);
@@ -56,7 +56,6 @@
 			this.hash[i] = [y];
 		return y;
 	}
-})();
 
 Crunchy.renameVariables = function(root) {
 	Crunchy.renameVariables.findVariables(root);
