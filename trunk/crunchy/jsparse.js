@@ -43,12 +43,16 @@ function CompilerContext(inFunction) {
 	this.varDecls = [];
 }
 
-var CCp = CompilerContext.prototype;
-CCp.bracketLevel = CCp.curlyLevel = CCp.parenLevel = CCp.hookLevel = 0;
-CCp.inForLoopInit = false;
+CompilerContext.prototype = {
+	bracketLevel: 0,
+    curlyLevel: 0,
+    parenLevel: 0,
+    hookLevel: 0,
+    inForLoopInit: false,
 
-// TODO: Either pull this out of the prototype or delete it.
-CCp.ecmaStrictMode = false;
+    // TODO: Either pull this out of the prototype or delete it.
+    ecmaStrictMode: false
+};
 
 var NodeTypes = {
 	SCRIPT : [ "body" ], // also: funDecls, varDecls
