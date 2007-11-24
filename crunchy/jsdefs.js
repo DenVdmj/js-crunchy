@@ -336,6 +336,10 @@ Crunchy.contextuallyReservedTokens.forEach(function(t) {
 Crunchy.keywords = {};
 Crunchy.tokens = [];
 
+Crunchy.lookupKeyword = function(keyword) {
+	return Crunchy.keywords[keyword] || false;
+};
+
 // Map assignment operators to their indexes in the tokens array.
 Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 
@@ -371,13 +375,8 @@ Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 		Crunchy.opPrecedence[GLOBAL[i]] = Crunchy.opPrecedence[i];
 	}
 
-	Crunchy.lookupKeyword = function(keyword) {
-		return Crunchy.keywords[keyword] || false;
-	};
-
 	for (var i = 0, j = Crunchy.assignOps.length; i < j; i++) {
 		var t = Crunchy.assignOps[i];
 		Crunchy.assignOps[t + '='] = Crunchy.tokens[t];
 	}
-
 })();
