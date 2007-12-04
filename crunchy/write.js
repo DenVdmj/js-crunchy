@@ -56,15 +56,15 @@ Crunchy.Writer.prototype = {
 
 		switch(this.prev) {
 		case '+':
-			if(token.charAt(0) == '+')
+			if(token.charAt(0) === '+')
 				this.result.push(' ');
 			break;
 		case '-':
-			if(token.charAt(0) == '-')
+			if(token.charAt(0) === '-')
 				this.result.push(' ');
 			break;
 		case '0':
-			if(token.charAt(0) == '.')
+			if(token.charAt(0) === '.')
 				this.result.push(' ');
 			break;
 		}
@@ -119,7 +119,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeStatement : function(s) {
-		if(this.invalidOp == "IF" && s.type == "IF" && !s.elsePart) {
+		if(this.invalidOp === "IF" && s.type === "IF" && !s.elsePart) {
 			this.writeBlock([s], true);
 			return;
 		}
@@ -296,14 +296,14 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeExpressionOrVar : function(e) {
-		return e.type == "VAR" || e.type == "CONST" ? this.writeVar(e) :
+		return e.type === "VAR" || e.type === "CONST" ? this.writeVar(e) :
 			this.writeExpression(e);
 	},
 
 	writeBracketed : function(es, open, close) {
 		this.clearInvalidOps(function() {
 			this.write(open);
-			if(es.constructor == Array) {
+			if(es.constructor === Array) {
 				for(var i = 0; i < es.length; ++i) {
 					if(i != 0) this.write(',');
 					// Note: Could just set the precedence to Crunchy.opPrecedence[COMMA] + 1.
@@ -313,7 +313,7 @@ Crunchy.Writer.prototype = {
 					});
 				}
 				// Arrays that end with an EMPTY need a trailing comma.
-				if(es.length && es.top().type == "EMPTY") this.write(',');
+				if(es.length && es.top().type === "EMPTY") this.write(',');
 			}
 			else {
 				this.writeExpression(es);
@@ -325,7 +325,7 @@ Crunchy.Writer.prototype = {
 	writeExpression : function(e, precedence) {
 		precedence = precedence || 0;
 
-		if(this.invalidOp == e.type) {
+		if(this.invalidOp === e.type) {
 			this.writeBracketed(e, '(', ')');
 			return;
 		}
@@ -366,7 +366,7 @@ Crunchy.Writer.prototype = {
 				if(precedence > Crunchy.opPrecedence["CONDITIONAL"])
 					this.write('(');
 				this.writeExpression(e.children[0],
-						e.children[0].type == "ASSIGN" ? Crunchy.opPrecedence["ASSIGN"]+1 :
+						e.children[0].type === "ASSIGN" ? Crunchy.opPrecedence["ASSIGN"]+1 :
 						Crunchy.opPrecedence["CONDITIONAL"]);
 				this.write('?');
 				this.writeExpression(e.children[1], Crunchy.opPrecedence["CONDITIONAL"]);
@@ -381,7 +381,7 @@ Crunchy.Writer.prototype = {
 			// Nothing binds closer, so brackets aren't required here.
 			// I suppose if DOT could use expressions for the member
 			// eg. x.(y()). But it doesn't, that's meaningless.
-			if(e.type == "NEW_WITH_ARGS")
+			if(e.type === "NEW_WITH_ARGS")
 				for(var i = 1; i < e.children.length; ++i) this.writeWord('new');
 
 			this.writeExpression(e.children[0], Crunchy.opPrecedence["DOT"]);
@@ -406,7 +406,7 @@ Crunchy.Writer.prototype = {
 			// TODO: A semi-colon is required after an object that ends a statement.
 			break;
 		case "PROPERTY_INIT": // TODO: Is this an expression?
-			if(e.children[0].type == "STRING" &&
+			if(e.children[0].type === "STRING" &&
 				/^[a-zA-Z$_][a-zA-Z0-9$_]*$/.test(e.children[0].value) &&
 				!Crunchy.lookupKeyword(e.children[0].value))
 			{
@@ -533,7 +533,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeFunction : function(node) {
-		var needBrackets = node.functionForm == Crunchy.EXPRESSED_FORM && this.statementStart;
+		var needBrackets = node.functionForm === Crunchy.EXPRESSED_FORM && this.statementStart;
 		if(needBrackets) this.write('(');
 		this.writeWord(Crunchy.tokens[node.type]);
 		if(node.name2) this.writeWord(node.name2.name);
@@ -553,7 +553,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeVar : function(v) {
-		this.writeWord(v.type == "VAR" ? 'var' : 'const');
+		this.writeWord(v.type === "VAR" ? 'var' : 'const');
 		for(var i = 0; i < v.children.length; ++i) {
 			if(i!=0) this.write(',');
 			var x = v.children[i];
@@ -566,7 +566,7 @@ Crunchy.Writer.prototype = {
 	},
 
 	writeBlock : function(statements, curliesRequired) {
-		if(statements.length == 0) {
+		if(statements.length === 0) {
 			if(curliesRequired) {
 				this.write('{}');
 				this.endStatement();
@@ -601,8 +601,8 @@ Crunchy.Writer.prototype = {
 			//
 			// TODO: Should probably deal with these special cases somewhere better.
 			if(curliesRequired || statements.length > 1 ||
-					statements[0].type == "DO" ||
-					statements[0].type == "FUNCTION") {
+					statements[0].type === "DO" ||
+					statements[0].type === "FUNCTION") {
 				// clearInvalidOps
 				// TODO: Why not in the other paths?
 				var old = this.invalidOp;

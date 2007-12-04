@@ -22,7 +22,7 @@ Crunchy.Hash.prototype = {
 	},
 	"forEach" : function(f) {
 		for(var i in this.hash) {
-			if(i.indexOf(this.prefix) == 0) {
+			if(i.indexOf(this.prefix) === 0) {
 				f(i.substr(this.prefix.length), this.hash[i]);
 			}
 		}
@@ -139,7 +139,7 @@ Crunchy.renameVariables.findVariables = function(root) {
 
 Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 		if(!node) return;
-		if(node.constructor == Array) {
+		if(node.constructor === Array) {
 			for(var i = 0; i < node.length; ++i)
 				this.findVariablesLoop(node[i], x);
 			return;
@@ -159,8 +159,8 @@ Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 			x.ScopeList.push(node.scope);
 
 			// TODO: Is this right for STATEMENT_FORM?
-			if(node.type == "FUNCTION" && node.name) {
-				if(node.functionForm == Crunchy.EXPRESSED_FORM) {
+			if(node.type === "FUNCTION" && node.name) {
+				if(node.functionForm === Crunchy.EXPRESSED_FORM) {
 					node.name2 = new this.ScopeVar(node.name, node.scope);
 					node.scope.decls.insert(node.name, node.name2);
 				}
@@ -186,7 +186,7 @@ Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 			if(node.ref.node && !node.unclearMatch && node.ref.node.readOnly &&
 					node.ref.node != node &&
 					node.ref.node.initializer &&
-					node.ref.node.initializer.type == "NUMBER") {
+					node.ref.node.initializer.type === "NUMBER") {
 				node.constValue = node.ref.node.initializer;
 			}
 			break;
@@ -199,7 +199,7 @@ Crunchy.renameVariables.findVariablesLoop = function(node, x, scope) {
 			//	   window.eval('var x = 1');
 			// Although, that's not strictly standard ECMAscript.
 
-			if(node.children[0].type == "IDENTIFIER" && node.children[0].value == 'eval') {
+			if(node.children[0].type === "IDENTIFIER" && node.children[0].value === 'eval') {
 				for(var i = x.currentScope; i; i = i.parent)
 					i.setMutable();
 			}

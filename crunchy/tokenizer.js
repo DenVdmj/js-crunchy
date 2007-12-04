@@ -52,7 +52,7 @@ Crunchy.Tokenizer = function(s, f, l) {
 
 Crunchy.Tokenizer.prototype = {
 	//done: function() {
-	//	return this.peek() == "END";
+	//	return this.peek() === "END";
 	//},
 
 	token: function() {
@@ -63,11 +63,11 @@ Crunchy.Tokenizer.prototype = {
 	// at its argument.
 
 	matchOperand: function (tt) {
-		return this.getToken(true) == tt || this.unget();
+		return this.getToken(true) === tt || this.unget();
 	},
 
 	matchOperator: function (tt) {
-		return this.getToken(false) == tt || this.unget();
+		return this.getToken(false) === tt || this.unget();
 	},
 
 	mustMatchOperand : function(tt) {
@@ -120,7 +120,7 @@ Crunchy.Tokenizer.prototype = {
 	_matchRegExp : function(regExp) {
 		regExp.lastIndex = this._cursor;
 		var x = regExp.exec(this.source);
-		return (x && x.index == this._cursor) ? x : null;
+		return (x && x.index === this._cursor) ? x : null;
 	},
 
 	_getKeyword : function(self, text) {
@@ -141,7 +141,7 @@ Crunchy.Tokenizer.prototype = {
 	},
 
 	_getDotNumber : function(self, text) {
-		if(text.length == 1) {
+		if(text.length === 1) {
 			return self._getOp(self, text);
 		}
 		else {
@@ -153,7 +153,7 @@ Crunchy.Tokenizer.prototype = {
 		//return self._newToken("STRING", text);
 		var value = text.substr(1, text.length - 2)
 			.replace(/\\x[0-9a-fA-F][0-9a-fA-F]|\\.|\\\n|\\\r\n?/g, function(m) {
-				if(m.length == 4) {
+				if(m.length === 4) {
 					return String.fromCharCode(parseInt(m.substr(2), 16));
 				}
 				else {
@@ -185,7 +185,7 @@ Crunchy.Tokenizer.prototype = {
 
 	_getCommentLine : function(self, text) {
 		var end = self.source.indexOf("\n", self._cursor);
-		if(end == -1) {
+		if(end === -1) {
 			self._cursor = self.source.length;
 		}
 		else {
@@ -289,9 +289,9 @@ Crunchy.Tokenizer.prototype = {
 	// point.
 	unget: function () {
 		do {
-			if (++this._lookahead == 4) throw "PANIC: too much lookahead!";
+			if (++this._lookahead === 4) throw "PANIC: too much lookahead!";
 			this._tokenIndex = (this._tokenIndex - 1) & 3;
-		} while(this._tokens[this._tokenIndex] && this._tokens[this._tokenIndex].type == "NEWLINE");
+		} while(this._tokens[this._tokenIndex] && this._tokens[this._tokenIndex].type === "NEWLINE");
 	},
 
 	newSyntaxError: function (m) {
@@ -370,14 +370,14 @@ Crunchy.Tokenizer.prototype = {
 		else if(/^[^A-Z\n]/.test(t)) { // Operators
 			//if(t.length > 1)
 			//	regExpParts.push(regExpEscape(t));
-			tokenizers["$" + t] = t[0] == "/" ? CTp._getSlash : CTp._getOp;
+			tokenizers["$" + t] = t[0] === "/" ? CTp._getSlash : CTp._getOp;
 		}
 	}
 
 	for (var i=0; i < Crunchy.assignOps.length; ++i) {
 		t = Crunchy.assignOps[i];
 		//regExpParts.push(regExpEscape(t) + '=')
-		tokenizers["$" + t + '='] = t[0] == "/" ? CTp._getSlash : CTp._getOp;
+		tokenizers["$" + t + '='] = t[0] === "/" ? CTp._getSlash : CTp._getOp;
 	}
 
 	//regExpParts.push(regExpEscape("//"));

@@ -29,7 +29,7 @@ var DomBuilder = {
 	ieAttrSet : function(a, i, el) {
 		var trans;
 		if ((trans = this.IE_TRANSLATIONS[i])) el[trans] = a[i];
-		else if (i == 'style') el.style.cssText = a[i];
+		else if (i === 'style') el.style.cssText = a[i];
 		else if (i.match(/^on/)) el[i] = new Function(a[i]);
 		else el.setAttribute(i, a[i]);
 	},
@@ -47,7 +47,7 @@ var DomBuilder = {
 	tagFunc : function(tag) {
 		return function() {
 			var a = arguments, at, ch; if (a.length>0) {
-			if (a[0].nodeName || typeof a[0] == "string") ch = a;
+			if (a[0].nodeName || typeof a[0] === "string") ch = a;
 			else { at = a[0]; ch = Array.prototype.slice.call(a, 1); } }
 			return DomBuilder.elem(tag, at, ch);
 		}
@@ -63,7 +63,7 @@ var DomBuilder = {
 			}
 		}
 		for (var i=0; i<c.length; i++) {
-			if (typeof c[i] == 'string' || c[i].constructor == String) c[i] = document.createTextNode(c[i]);
+			if (typeof c[i] === 'string' || c[i].constructor === String) c[i] = document.createTextNode(c[i]);
 			el.appendChild(c[i]);
 		}
 		return el;
