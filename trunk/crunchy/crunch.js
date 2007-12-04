@@ -26,7 +26,7 @@
 				current.children = last.children.concat(current.children);
 				func.body.splice(i-1, 1);
 			}
-			else if(last && current.type == "FOR" && current.setup && current.setup.type == last) {
+			else if(last && current.type == "FOR" && current.setup && current.setup.type == last.type) {
 				current.setup.children = last.children.concat(current.setup.children);
 				func.body.splice(i-1, 1);
 			}

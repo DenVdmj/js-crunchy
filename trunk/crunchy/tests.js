@@ -72,6 +72,7 @@ if(Crunchy.crunch("const x = 1; const y = 2; var a = 3; var b = 4;").length > 25
 if(Crunchy.crunch("const x = 'blah' + \" blah\" + 'flip'").length > 23) print("Bad crunching 8.");
 // This one's a little tricky. The variable xy should not be renamed, but the final function expression should be.
 if(Crunchy.crunch("function test(a) { var xy = 1; eval(a); var b = function xy() {} }").length > 55) print("Bad crunching 9.");
+if(Crunchy.crunch("var x=1;for(var i=0;i<x;++i);").length > 25) print("Bad crunching 10.");
 
 runTest("var a=0;(function(){a=1})();", "test(a === 1)")
 runTest("var a=0\nfunction test(){}(function(){a=1})()", "test(a === 1)")
