@@ -224,7 +224,7 @@ Crunchy.keywords = {};
 Crunchy.tokens = [];
 
 Crunchy.lookupKeyword = function(keyword) {
-	return Crunchy.keywords[keyword] || false;
+	return Crunchy.keywords['$' + keyword] || false;
 };
 
 // Map assignment operators to their indexes in the tokens array.
@@ -236,7 +236,7 @@ Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 		var t = Crunchy.tokenList[i];
 		if (/^[a-z]/.test(t)) {
 			var tt = t.toUpperCase();
-			Crunchy.keywords[t] = tt;
+			Crunchy.keywords['$' + t] = tt;
 		} else {
 			var tt = /^\W/.test(t) ? Crunchy.opTypeNames[t] : t
 		}
@@ -248,7 +248,6 @@ Crunchy.assignOps = ['|', '^', '&', '<<', '>>', '>>>', '+', '-', '*', '/', '%'];
 	// reserved keywords and all that.
 	Crunchy.tokens["GETTER"] = "get";
 	Crunchy.tokens["SETTER"] = "set";
-
 
 	for (var i = 0, j = Crunchy.assignOps.length; i < j; i++) {
 		var t = Crunchy.assignOps[i];
