@@ -11,7 +11,7 @@
 	function trimLoopBody(loop) {
 		var last = loop.body.top();
 		if(last &&
-			last.type == "CONTINUE" &&
+			last.type === "CONTINUE" &&
 			!last.label) {
 			--loop.body.length;
 		}
@@ -22,18 +22,18 @@
 		var i = 0, last = false;
 		while(i < func.body.length) {
 			var current = func.body[i];
-			if(last && last.type == current.type) {
+			if(last && last.type === current.type) {
 				current.children = last.children.concat(current.children);
 				func.body.splice(i-1, 1);
 			}
-			else if(last && current.type == "FOR" && current.setup && current.setup.type == last.type) {
+			else if(last && current.type === "FOR" && current.setup && current.setup.type === last.type) {
 				current.setup.children = last.children.concat(current.setup.children);
 				func.body.splice(i-1, 1);
 			}
 			else {
 				++i;
 			}
-			last = (current.type == "VAR" || current.type == "CONST") ? current : false;
+			last = (current.type === "VAR" || current.type === "CONST") ? current : false;
 		}
 	}
 
@@ -61,7 +61,7 @@
 		var i = 0;
 		while(i < plus.children.length - 1) {
 			// TODO: Convert values to string?
-			if(plus.children[i].type == "STRING" && plus.children[i+1].type == "STRING") {
+			if(plus.children[i].type === "STRING" && plus.children[i+1].type === "STRING") {
 				plus.children[i].value = plus.children[i].value + plus.children[i+1].value;
 				plus.children.splice(i+1, 1);
 			}
@@ -69,7 +69,7 @@
 				++i;
 			}
 		}
-		if(plus.children.length == 1) {
+		if(plus.children.length === 1) {
 			// TODO: Replace plus with plus.children[0].
 			plus.type = "STRING";
 			plus.value = plus.children[0].value;

@@ -9,7 +9,7 @@ new function() {
 		concat : function() {
 			for(var r=[],i=0,o; i<arguments.length; ++i) {
 				o = arguments[i];
-				if(typeof(o) == Object && o.constructor == Array) {
+				if(typeof(o) === 'object' && o.constructor === Array) {
 					for(var j=0; j<o.length; ++j)
 						r[r.length] = o[j];
 				}
@@ -96,7 +96,7 @@ new function() {
 
 	// This function deals with a negative/null index.
 	function adjustIndex(s, i) {
-		return i == null ? 0 : i > 0 ? i : Math.max(i + s.length, 0);
+		return !i ? 0 : i > 0 ? i : Math.max(i + s.length, 0);
 	}
 
 	// Create missing Array constructor and prototype methods.
