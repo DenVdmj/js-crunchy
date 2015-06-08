@@ -1,0 +1,1 @@
+Based on a fork of the narcissus parser, this minimiser makes use of the improved information to get better and safer compression.
